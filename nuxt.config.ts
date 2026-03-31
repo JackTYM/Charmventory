@@ -3,7 +3,8 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
-  // Cloudflare Pages deployment
+  // Cloudflare Pages deployment (SPA + API Workers)
+  ssr: false,
   nitro: {
     preset: 'cloudflare-pages',
   },
