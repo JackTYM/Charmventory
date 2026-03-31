@@ -23,12 +23,12 @@ function extractNeonAuthCookies(cookieHeader: string | null): string {
 }
 
 export default defineEventHandler(async (event) => {
-  const baseUrl = process.env.NEON_AUTH_BASE_URL
+  const baseUrl = process.env.NEON_AUTH_BASE_URL || process.env.NEON_AUTH_URL
 
   if (!baseUrl) {
     throw createError({
       statusCode: 500,
-      message: 'NEON_AUTH_BASE_URL environment variable is required'
+      message: 'NEON_AUTH_BASE_URL or NEON_AUTH_URL environment variable is required'
     })
   }
 
