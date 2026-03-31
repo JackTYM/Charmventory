@@ -1,0 +1,479 @@
+openapi: 3.0.3
+info:
+  title: Pandora Database API
+  description: |
+    Free, open API for accessing the community-sourced **Pandora jewelry** database.
+
+    This database is exclusively for Pandora brand jewelry (charms, bracelets, rings, etc.)
+    and official Pandora catalogs.
+
+    ## Rate Limits
+    - Anonymous: 100 requests/minute
+    - Contributors: 1000 requests/minute
+
+    ## Data License
+    All data is provided under CC BY-SA 4.0. You're free to use it for any purpose
+    as long as you provide attribution and share any modifications under the same license.
+  version: 1.0.0
+  contact:
+    name: Charmventory
+    url: https://charmventory.com
+  license:
+    name: CC BY-SA 4.0
+    url: https://creativecommons.org/licenses/by-sa/4.0/
+
+servers:
+  - url: https://database.charmventory.com/api
+    description: Production
+  - url: http://localhost:3000/api
+    description: Development
+
+tags:
+  - name: Charms
+    description: Browse and search Pandora jewelry items
+  - name: Catalogs
+    description: Access digitized catalog pages
+  - name: Export
+    description: Bulk data downloads
+  - name: Contribute
+    description: Submit new data (requires authentication)
+
+paths:
+  /charms:
+    get:
+      tags:
+        - Charms
+      summary: List all charms
+      description: Retrieve a paginated list of charms with optional filtering
+      parameters:
+        - name: search
+          in: query
+          description: Search by name or Style ID
+          schema:
+            type: string
+          example: "toy story"
+        - name: collection
+          in: query
+          description: Filter by collection name
+          schema:
+            type: string
+          example: "Disney"
+        - name: type
+          in: query
+          description: Filter by item type
+          schema:
+            type: string
+            enum: [charm, clip, murano, safety_chain, bracelet, necklace, ring, earring]
+        - name: year
+          in: query
+          description: Filter by release year
+          schema:
+            type: integer
+          example: 2023
+        - name: isLimited
+          in: query
+          description: Filter by limited edition status
+          schema:
+            type: boolean
+        - name: isRetired
+          in: query
+          description: Filter by retired status
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          description: Results per page (max 100)
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: offset
+          in: query
+          description: Pagination offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Charm'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /charms/{styleId}:
+    get:
+      tags:
+        - Charms
+      summary: Get charm details
+      description: Retrieve detailed information about a specific charm by Style ID
+      parameters:
+        - name: styleId
+          in: path
+          required: true
+          description: The Pandora Style ID
+          schema:
+            type: string
+          example: "791501C01"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CharmDetail'
+        '404':
+          description: Charm not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /catalogs:
+    get:
+      tags:
+        - Catalogs
+      summary: List all catalogs
+      description: Retrieve a list of documented Pandora catalogs
+      parameters:
+        - name: year
+          in: query
+          description: Filter by year
+          schema:
+            type: integer
+          example: 2023
+        - name: season
+          in: query
+          description: Filter by season
+          schema:
+            type: string
+            enum: [Spring, Summer, Autumn, Winter]
+        - name: region
+          in: query
+          description: Filter by region
+          schema:
+            type: string
+          example: "US"
+        - name: status
+          in: query
+          description: Filter by documentation status
+          schema:
+            type: string
+            enum: [complete, partial, missing]
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Catalog'
+
+  /catalogs/{id}:
+    get:
+      tags:
+        - Catalogs
+      summary: Get catalog details
+      description: Retrieve detailed information about a specific catalog
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogDetail'
+
+  /catalogs/{id}/pages:
+    get:
+      tags:
+        - Catalogs
+      summary: Get catalog pages
+      description: Retrieve all scanned pages for a specific catalog
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CatalogPage'
+
+  /export:
+    get:
+      tags:
+        - Export
+      summary: Export database
+      description: Download the entire database as CSV or JSON
+      parameters:
+        - name: format
+          in: query
+          description: Export format
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+        - name: type
+          in: query
+          description: Data type to export
+          schema:
+            type: string
+            enum: [charms, catalogs, all]
+            default: all
+      responses:
+        '200':
+          description: Successful export
+          content:
+            application/json:
+              schema:
+                type: object
+            text/csv:
+              schema:
+                type: string
+
+  /contributions:
+    post:
+      tags:
+        - Contribute
+      summary: Submit a contribution
+      description: Submit new charm data or catalog pages for review
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Contribution'
+      responses:
+        '201':
+          description: Contribution submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  status:
+                    type: string
+                    example: "pending"
+                  message:
+                    type: string
+                    example: "Thank you! Your contribution is pending review."
+        '401':
+          description: Authentication required
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Required for write operations. Get a token by becoming a contributor.
+
+  schemas:
+    Charm:
+      type: object
+      properties:
+        styleId:
+          type: string
+          example: "791501C01"
+        name:
+          type: string
+          example: "Disney Pixar Toy Story Alien Charm"
+        brand:
+          type: string
+          example: "Pandora"
+        collection:
+          type: string
+          example: "Disney"
+        type:
+          type: string
+          example: "charm"
+        originalPrice:
+          type: number
+          example: 55.00
+        currency:
+          type: string
+          example: "USD"
+        isLimited:
+          type: boolean
+        isRetired:
+          type: boolean
+        primaryImage:
+          type: string
+          nullable: true
+
+    CharmDetail:
+      allOf:
+        - $ref: '#/components/schemas/Charm'
+        - type: object
+          properties:
+            description:
+              type: string
+            materials:
+              type: array
+              items:
+                type: string
+              example: ["Sterling Silver", "Enamel"]
+            colors:
+              type: array
+              items:
+                type: string
+              example: ["Green", "Blue"]
+            releaseDate:
+              type: string
+              format: date
+            retireDate:
+              type: string
+              format: date
+              nullable: true
+            region:
+              type: string
+            isCountryExclusive:
+              type: boolean
+            exclusiveCountry:
+              type: string
+              nullable: true
+            images:
+              type: array
+              items:
+                $ref: '#/components/schemas/CharmImage'
+            catalogAppearances:
+              type: array
+              items:
+                type: object
+                properties:
+                  catalogId:
+                    type: string
+                  catalogName:
+                    type: string
+                  pageNumber:
+                    type: integer
+
+    CharmImage:
+      type: object
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+        type:
+          type: string
+          enum: [official, community, catalog]
+        uploadedBy:
+          type: string
+          nullable: true
+
+    Catalog:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          example: "Spring 2023 Collection"
+        year:
+          type: integer
+          example: 2023
+        season:
+          type: string
+          example: "Spring"
+        region:
+          type: string
+          example: "US"
+        totalPages:
+          type: integer
+          example: 48
+        documentedPages:
+          type: integer
+          example: 48
+        status:
+          type: string
+          enum: [complete, partial, missing]
+
+    CatalogDetail:
+      allOf:
+        - $ref: '#/components/schemas/Catalog'
+        - type: object
+          properties:
+            coverImage:
+              type: string
+            charmCount:
+              type: integer
+            contributors:
+              type: array
+              items:
+                type: string
+
+    CatalogPage:
+      type: object
+      properties:
+        id:
+          type: string
+        pageNumber:
+          type: integer
+        imageUrl:
+          type: string
+        charms:
+          type: array
+          items:
+            type: string
+          description: Style IDs of charms on this page
+
+    Contribution:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [charm, catalog_page, correction]
+        styleId:
+          type: string
+          description: Required for charm or correction
+        data:
+          type: object
+          description: The data being contributed
+
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string

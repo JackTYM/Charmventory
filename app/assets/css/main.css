@@ -1,0 +1,290 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply font-body text-ink antialiased;
+  }
+
+  body {
+    @apply bg-light-bg min-h-screen;
+  }
+
+  .dark body {
+    @apply bg-dark-bg text-pearl;
+  }
+
+  /* Typography defaults */
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  /* Buttons - from Option A styling */
+  .btn {
+    @apply font-body text-sm font-medium px-6 py-3 rounded-full transition-all duration-300 inline-flex items-center gap-2 tracking-wide;
+  }
+
+  .btn-primary {
+    @apply bg-rose-primary text-white shadow-rose hover:-translate-y-0.5 hover:shadow-rose-hover;
+  }
+
+  .btn-primary:hover {
+    background-color: #6e2f3d;
+  }
+
+  .dark .btn-primary:hover {
+    background-color: #3d0e16;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent text-ink border-[1.5px] border-ink hover:bg-ink hover:text-white;
+  }
+
+  .dark .btn-secondary {
+    @apply text-pearl border-pearl hover:bg-pearl hover:text-dark-bg;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-rose-primary px-4 py-2 hover:bg-rose-pale;
+  }
+
+  .dark .btn-ghost {
+    @apply hover:bg-rose-glow;
+  }
+
+  .btn-gold {
+    @apply bg-gradient-to-br from-gold to-[#D4B86A] text-white shadow-gold hover:-translate-y-0.5;
+  }
+
+  /* Cards - from Option A */
+  .card {
+    @apply bg-light-card rounded-lg overflow-hidden shadow-card transition-all duration-300 hover:-translate-y-2 hover:shadow-card-hover;
+  }
+
+  .dark .card {
+    @apply bg-dark-card border border-dark-border;
+  }
+
+  .card-badge {
+    @apply absolute top-4 left-4 bg-rose-primary text-white px-3 py-1 rounded-full text-[10px] uppercase tracking-wider font-medium z-10;
+  }
+
+  .card-badge-gold {
+    @apply bg-gold;
+  }
+
+  /* Stats - from Option A */
+  .stat-card {
+    @apply bg-light-card rounded-lg p-6 text-center shadow-[0_2px_15px_rgba(0,0,0,0.04)];
+  }
+
+  .dark .stat-card {
+    @apply bg-dark-card border border-dark-border;
+  }
+
+  .stat-value {
+    @apply font-display text-4xl text-ink leading-none mb-1;
+  }
+
+  .dark .stat-value {
+    @apply text-pearl;
+  }
+
+  .stat-value-rose {
+    @apply text-rose-primary;
+  }
+
+  .stat-value-gold {
+    @apply text-gold;
+  }
+
+  .stat-label {
+    @apply text-xs uppercase tracking-wider text-muted;
+  }
+
+  .dark .stat-label {
+    @apply text-ash;
+  }
+
+  /* Navigation - from Option A */
+  .nav-bar {
+    @apply bg-light-card rounded-lg p-3 shadow-nav flex justify-around items-center;
+  }
+
+  .dark .nav-bar {
+    @apply bg-dark-card border border-dark-border;
+  }
+
+  .nav-item {
+    @apply flex flex-col items-center gap-1.5 px-4 py-2 text-muted no-underline transition-colors duration-300 rounded-md;
+  }
+
+  .dark .nav-item {
+    @apply text-ash;
+  }
+
+  .nav-item:hover {
+    @apply text-rose-primary;
+  }
+
+  .nav-item.active {
+    @apply text-rose-primary;
+  }
+
+  .nav-item.active .nav-icon {
+    @apply bg-rose-pale;
+  }
+
+  .dark .nav-item.active .nav-icon {
+    @apply bg-rose-glow;
+  }
+
+  .nav-icon {
+    @apply w-11 h-11 rounded-full flex items-center justify-center text-xl transition-colors duration-300;
+  }
+
+  .nav-label {
+    @apply text-[11px] tracking-wide;
+  }
+
+  /* Tags */
+  .tag {
+    @apply px-3.5 py-1.5 rounded-full text-xs cursor-pointer transition-all duration-300;
+  }
+
+  .tag-default {
+    @apply bg-light-bg-alt text-ink hover:bg-rose-pale;
+  }
+
+  .dark .tag-default {
+    @apply bg-dark-elevated text-pearl border border-dark-border hover:border-rose-primary hover:text-rose-primary;
+  }
+
+  .tag-active {
+    @apply bg-rose-primary text-white;
+  }
+
+  /* Priority badges */
+  .badge {
+    @apply px-3 py-1 rounded text-[10px] font-medium uppercase tracking-wider;
+  }
+
+  .badge-high {
+    @apply bg-red-50 text-red-700;
+  }
+
+  .dark .badge-high {
+    @apply bg-red-900/20 text-red-400 border border-red-800/30;
+  }
+
+  .badge-medium {
+    @apply bg-amber-50 text-amber-700;
+  }
+
+  .dark .badge-medium {
+    @apply bg-amber-900/20 text-amber-400 border border-amber-800/30;
+  }
+
+  .badge-low {
+    @apply bg-blue-50 text-blue-700;
+  }
+
+  .dark .badge-low {
+    @apply bg-blue-900/20 text-blue-400 border border-blue-800/30;
+  }
+
+  /* Form inputs */
+  .form-input {
+    @apply font-body text-base p-4 border-[1.5px] border-light-border rounded-md bg-light-card text-ink transition-all duration-300 w-full;
+  }
+
+  .form-input:focus {
+    @apply outline-none border-rose-primary ring-4 ring-rose-pale;
+  }
+
+  .dark .form-input {
+    @apply bg-dark-card text-pearl border-dark-border;
+  }
+
+  .dark .form-input:focus {
+    @apply ring-rose-glow;
+  }
+
+  .form-label {
+    @apply text-xs uppercase tracking-wider text-muted mb-1 block;
+  }
+
+  .dark .form-label {
+    @apply text-ash;
+  }
+
+  /* Section backgrounds */
+  .section-alt {
+    @apply bg-light-bg-alt;
+  }
+
+  .dark .section-alt {
+    @apply bg-dark-bg-alt;
+  }
+}
+
+@layer utilities {
+  /* Gradient text like B's title */
+  .text-gradient-rose {
+    @apply bg-gradient-to-r from-rose-primary to-rose-bright bg-clip-text text-transparent;
+  }
+
+  /* Star ratings */
+  .star {
+    @apply text-gold text-sm;
+  }
+
+  .star-empty {
+    @apply opacity-30;
+  }
+
+  /* Light mode uses lighter rose primary for better visibility */
+  :root {
+    --rose-primary-adaptive: #8b3d4d;
+  }
+
+  .dark {
+    --rose-primary-adaptive: #5c1521;
+  }
+}
+
+/* Light mode overrides for rose-primary - use lighter shade for readability */
+.text-rose-primary {
+  color: #8b3d4d;
+}
+
+.dark .text-rose-primary {
+  color: #c77485;
+}
+
+.bg-rose-primary {
+  background-color: #8b3d4d;
+}
+
+.dark .bg-rose-primary {
+  background-color: #5c1521;
+}
+
+.border-rose-primary {
+  border-color: #8b3d4d;
+}
+
+.dark .border-rose-primary {
+  border-color: #5c1521;
+}
+
+.ring-rose-primary {
+  --tw-ring-color: #8b3d4d;
+}
+
+.dark .ring-rose-primary {
+  --tw-ring-color: #5c1521;
+}
