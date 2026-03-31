@@ -5,9 +5,6 @@ export default defineNuxtConfig({
 
   // Cloudflare Pages deployment (SPA + API Workers)
   ssr: false,
-  nitro: {
-    preset: 'cloudflare-pages',
-  },
 
   modules: [
     '@nuxtjs/tailwindcss',
