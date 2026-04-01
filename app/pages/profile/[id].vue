@@ -49,42 +49,15 @@ async function loadProfile() {
   error.value = ''
 
   try {
-    const config = useRuntimeConfig()
-
-    // Fetch user data using anonymous fetch (public data)
-    const userResponse = await fetch(
-      `${config.public.neonDataApiUrl}/users?id=eq.${profileId.value}&select=id,name,avatar,bio,social_links,created_at`,
-      { headers: { 'Content-Type': 'application/json' } }
-    )
-
-    if (!userResponse.ok) throw new Error('Profile not found')
-
-    const users = await userResponse.json()
-    if (!users || users.length === 0) throw new Error('Profile not found')
-
-    const userData = users[0]
-
-    // Fetch privacy settings (public read)
-    const privacyResponse = await fetch(
-      `${config.public.neonDataApiUrl}/profile_privacy?user_id=eq.${profileId.value}`,
-      { headers: { 'Content-Type': 'application/json' } }
-    )
-    const privacyData = privacyResponse.ok ? await privacyResponse.json() : []
-    const privacy = privacyData[0] || {}
-
-    // Fetch post count
-    const postsResponse = await fetch(
-      `${config.public.neonDataApiUrl}/posts?user_id=eq.${profileId.value}&select=id`,
-      { headers: { 'Content-Type': 'application/json', 'Prefer': 'count=exact' } }
-    )
-    const postCount = parseInt(postsResponse.headers.get('content-range')?.split('/')[1] || '0')
+    // Use server API for public profile data
+    const userData = await $fetch(`/api/users/${profileId.value}`)
 
     // Parse social links
     let socialLinks = {}
-    if (userData.social_links) {
-      socialLinks = typeof userData.social_links === 'string'
-        ? JSON.parse(userData.social_links)
-        : userData.social_links
+    if (userData.socialLinks) {
+      socialLinks = typeof userData.socialLinks === 'string'
+        ? JSON.parse(userData.socialLinks)
+        : userData.socialLinks
     }
 
     profile.value = {
@@ -93,13 +66,13 @@ async function loadProfile() {
       avatar: userData.avatar,
       bio: userData.bio,
       socialLinks,
-      itemCount: 0, // Items are private via RLS, so we can't count them for other users
-      postCount,
-      joinedAt: userData.created_at,
-      privacy: {
-        collection: privacy.show_collection !== false,
-        wishlist: privacy.show_wishlist !== false,
-        forSale: privacy.show_for_sale !== false,
+      itemCount: userData.itemCount || 0,
+      postCount: userData.postCount || 0,
+      joinedAt: userData.createdAt,
+      privacy: userData.privacy || {
+        collection: true,
+        wishlist: false,
+        forSale: true,
       },
       items: [],
     }
