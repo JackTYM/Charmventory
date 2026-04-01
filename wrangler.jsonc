@@ -8,6 +8,6 @@
     "NEON_DATA_API_URL": "https://ep-delicate-brook-akms1h65.apirest.c-3.us-west-2.aws.neon.tech/neondb/rest/v1",
     "R2_ENDPOINT": "https://b02f8af4ff36e6fa9e028952a9f38043.r2.cloudflarestorage.com",
     "R2_BUCKET_NAME": "charmventory-images",
-    "R2_PUBLIC_URL": "https://images.charmventory.com"
+    "R2_PUBLIC_URL": "https://image.charmventory.com"
   }
 }

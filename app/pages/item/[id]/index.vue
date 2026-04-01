@@ -29,6 +29,7 @@ async function fetchItem() {
       .single()
 
     if (queryError) throw new Error(queryError.message)
+    if (!data) throw new Error('Item not found')
 
     const row = data as any
     item.value = {
@@ -103,12 +104,13 @@ const getMaterials = (materials: string[] | string | null) => {
   if (!materials) return []
   if (typeof materials === 'string') {
     try {
-      return JSON.parse(materials)
+      const parsed = JSON.parse(materials)
+      return Array.isArray(parsed) ? parsed : []
     } catch {
       return [materials]
     }
   }
-  return materials
+  return Array.isArray(materials) ? materials : []
 }
 
 const formatDate = (date: string | null) => {
@@ -195,7 +197,7 @@ const conditionLabels: Record<string, string> = {
             class="w-full h-full object-cover"
           />
         </div>
-        <div v-if="item.images.length > 1" class="flex gap-2 mt-4 justify-center">
+        <div v-if="item.images?.length > 1" class="flex gap-2 mt-4 justify-center">
           <div
             v-for="(img, i) in item.images"
             :key="img.id"
