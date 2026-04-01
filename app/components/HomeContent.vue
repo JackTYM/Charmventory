@@ -229,6 +229,23 @@ function getItemImage(item: any) {
           </NuxtLink>
         </div>
       </section>
+
+      <!-- Database Link (visible on mobile where sidebar isn't shown) -->
+      <section class="mt-8 lg:hidden">
+        <a
+          href="https://database.charmventory.com"
+          class="block p-4 bg-light-card dark:bg-dark-card rounded-lg shadow-card hover:shadow-md transition-shadow"
+        >
+          <div class="flex items-center gap-4">
+            <div class="text-3xl">📚</div>
+            <div class="flex-1">
+              <h3 class="font-display text-lg text-ink dark:text-pearl">Pandora Database</h3>
+              <p class="text-sm text-muted dark:text-ash">Browse Style IDs, catalogs & historical data</p>
+            </div>
+            <span class="text-rose-primary">→</span>
+          </div>
+        </a>
+      </section>
     </template>
   </div>
 </template>
