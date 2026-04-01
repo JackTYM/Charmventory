@@ -261,11 +261,11 @@ function formatDate(dateStr: string) {
                   <h4 class="font-medium text-ink dark:text-pearl">{{ scraper.name }}</h4>
                   <span
                     class="px-2 py-0.5 text-xs rounded"
-                    :class="scraper.config.enabled
+                    :class="scraper.config?.enabled
                       ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                       : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
                   >
-                    {{ scraper.config.enabled ? 'Enabled' : 'Disabled' }}
+                    {{ scraper.config?.enabled ? 'Enabled' : 'Disabled' }}
                   </span>
                   <span v-if="scraper.isRunning || runningScraperName === scraper.name" class="px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
                     Running...
@@ -274,7 +274,7 @@ function formatDate(dateStr: string) {
                 <p class="text-sm text-muted dark:text-ash mt-1">{{ scraper.description }}</p>
 
                 <!-- Last run info -->
-                <div v-if="scraper.config.lastResult" class="mt-3 p-3 bg-light-bg dark:bg-dark-elevated rounded text-sm">
+                <div v-if="scraper.config?.lastResult" class="mt-3 p-3 bg-light-bg dark:bg-dark-elevated rounded text-sm">
                   <div class="flex items-center gap-4 flex-wrap">
                     <span :class="scraper.config.lastResult.success ? 'text-green-600' : 'text-red-600'">
                       {{ scraper.config.lastResult.success ? '✓ Success' : '✗ Failed' }}
@@ -289,7 +289,7 @@ function formatDate(dateStr: string) {
                       {{ scraper.config.lastResult.catalogsFound }} catalogs
                     </span>
                   </div>
-                  <div v-if="scraper.config.lastResult.errors.length > 0" class="mt-2 text-red-600 dark:text-red-400 text-xs">
+                  <div v-if="scraper.config.lastResult.errors?.length > 0" class="mt-2 text-red-600 dark:text-red-400 text-xs">
                     Errors: {{ scraper.config.lastResult.errors.slice(0, 3).join(', ') }}
                     <span v-if="scraper.config.lastResult.errors.length > 3">
                       ... and {{ scraper.config.lastResult.errors.length - 3 }} more
@@ -301,7 +301,7 @@ function formatDate(dateStr: string) {
                 </div>
 
                 <!-- Config info -->
-                <div class="mt-2 text-xs text-muted dark:text-ash">
+                <div v-if="scraper.config" class="mt-2 text-xs text-muted dark:text-ash">
                   <span v-if="scraper.config.cronSchedule">Cron: {{ scraper.config.cronSchedule }}</span>
                   <span v-if="scraper.config.rateLimit" class="ml-3">Rate: {{ scraper.config.rateLimit }} req/s</span>
                 </div>
@@ -309,14 +309,14 @@ function formatDate(dateStr: string) {
 
               <div class="flex gap-2">
                 <button
-                  @click="toggleScraper(scraper.name, !scraper.config.enabled)"
+                  @click="toggleScraper(scraper.name, !scraper.config?.enabled)"
                   class="btn btn-secondary text-sm"
                 >
-                  {{ scraper.config.enabled ? 'Disable' : 'Enable' }}
+                  {{ scraper.config?.enabled ? 'Disable' : 'Enable' }}
                 </button>
                 <button
                   @click="runScraper(scraper.name)"
-                  :disabled="!scraper.config.enabled || runningScraperName === scraper.name || scraper.isRunning"
+                  :disabled="!scraper.config?.enabled || runningScraperName === scraper.name || scraper.isRunning"
                   class="btn btn-primary text-sm"
                 >
                   {{ runningScraperName === scraper.name || scraper.isRunning ? 'Running...' : 'Run Now' }}
