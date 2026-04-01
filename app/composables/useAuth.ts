@@ -264,8 +264,12 @@ export function useAuth() {
   }
 
   function getAuthHeaders(): Record<string, string> {
-    // For localhost without HTTPS, cookies won't work
-    // Send token as Authorization header as fallback
+    // Prefer JWT (contains user info, can be decoded server-side)
+    // Fall back to session token if JWT not available
+    const jwt = getStoredJwt()
+    if (jwt) {
+      return { 'Authorization': `Bearer ${jwt}` }
+    }
     const token = getStoredToken()
     if (token) {
       return { 'Authorization': `Bearer ${token}` }

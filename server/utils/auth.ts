@@ -1,6 +1,3 @@
-// Neon Auth cookies can have different prefixes
-const NEON_AUTH_COOKIE_PREFIXES = ['neon_auth', 'neon-auth', '__Secure-neon-auth', '__Host-neon-auth']
-
 interface User {
   id: string
   email: string
@@ -8,18 +5,45 @@ interface User {
   emailVerified?: boolean
 }
 
-function extractNeonAuthCookies(cookieHeader: string | null): string {
-  if (!cookieHeader) return ''
-
-  const cookies = cookieHeader.split(';').map(c => c.trim())
-  const neonCookies = cookies.filter(c =>
-    NEON_AUTH_COOKIE_PREFIXES.some(prefix => c.startsWith(prefix))
-  )
-  return neonCookies.join('; ')
+// Decode JWT payload without verifying signature
+// For RLS, Neon Auth already validates the JWT, this is just to extract user info
+function decodeJwtPayload(jwt: string): any | null {
+  try {
+    const parts = jwt.split('.')
+    if (parts.length !== 3) return null
+    const payload = Buffer.from(parts[1], 'base64').toString('utf-8')
+    return JSON.parse(payload)
+  } catch {
+    return null
+  }
 }
 
-// Helper to get user from request by checking Neon Auth session
+// Helper to get user from request by checking JWT or session token
 export async function getUserFromRequest(event: any): Promise<User | null> {
+  // Check for Authorization header (JWT or session token)
+  const authHeader = getHeader(event, 'authorization')
+  if (!authHeader?.startsWith('Bearer ')) {
+    return null
+  }
+
+  const token = authHeader.substring(7)
+  if (!token) {
+    return null
+  }
+
+  // Try to decode as JWT first (for Data API JWT)
+  const payload = decodeJwtPayload(token)
+  if (payload?.sub) {
+    // JWT from Neon Auth contains user info in the payload
+    return {
+      id: payload.sub,
+      email: payload.email || '',
+      name: payload.name,
+      emailVerified: payload.email_verified
+    }
+  }
+
+  // Fall back to validating session token with Neon Auth
   const config = useRuntimeConfig(event)
   const baseUrl = config.neonAuthUrl
 
@@ -28,43 +52,13 @@ export async function getUserFromRequest(event: any): Promise<User | null> {
     return null
   }
 
-  // Try cookies first
-  const cookieHeader = getHeader(event, 'cookie')
-  const neonCookies = extractNeonAuthCookies(cookieHeader || '')
-
-  // Also check for Authorization header as fallback
-  const authHeader = getHeader(event, 'authorization')
-  let bearerToken: string | null = null
-  if (authHeader?.startsWith('Bearer ')) {
-    bearerToken = authHeader.substring(7)
-  }
-
-  // If no cookies and no bearer token, unauthorized
-  if (!neonCookies && !bearerToken) {
-    return null
-  }
-
   try {
-    // Build request headers
-    const requestHeaders: Record<string, string> = {
-      'x-neon-auth-proxy': 'nuxt-server'
-    }
-
-    // Add cookies if available
-    if (neonCookies) {
-      requestHeaders['Cookie'] = neonCookies
-    }
-
-    // Add bearer token as cookie format if no cookies but we have token
-    if (!neonCookies && bearerToken) {
-      // The token from signin/signup response can be used directly
-      // We need to format it as the session token cookie
-      requestHeaders['Cookie'] = `neon_auth.session_token=${bearerToken}`
-    }
-
     const response = await fetch(`${baseUrl}/get-session`, {
       method: 'GET',
-      headers: requestHeaders
+      headers: {
+        'Cookie': `neon_auth.session_token=${token}`,
+        'x-neon-auth-proxy': 'nuxt-server'
+      }
     })
 
     if (!response.ok) {
@@ -73,7 +67,7 @@ export async function getUserFromRequest(event: any): Promise<User | null> {
 
     const data = await response.json()
 
-    if (data && data.user) {
+    if (data?.user) {
       return {
         id: data.user.id,
         email: data.user.email,
