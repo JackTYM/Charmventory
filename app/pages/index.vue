@@ -68,7 +68,7 @@ const features = [
       <div class="px-4 py-16 lg:py-24 max-w-6xl mx-auto">
         <div class="text-center">
           <!-- Logo -->
-          <img src="/logo.png" alt="Charmventory" class="h-32 lg:h-48 mx-auto mb-8" />
+          <img src="/logo.png" alt="Charmventory" class="h-32 lg:h-48 mx-auto mb-8 dark:drop-shadow-[0_0_12px_rgba(255,255,255,0.4)]" />
 
           <!-- Tagline -->
           <h1 class="font-display text-3xl lg:text-5xl text-ink dark:text-pearl mb-6">
