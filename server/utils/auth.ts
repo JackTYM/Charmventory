@@ -20,10 +20,11 @@ function extractNeonAuthCookies(cookieHeader: string | null): string {
 
 // Helper to get user from request by checking Neon Auth session
 export async function getUserFromRequest(event: any): Promise<User | null> {
-  const baseUrl = process.env.NEON_AUTH_BASE_URL
+  const config = useRuntimeConfig(event)
+  const baseUrl = config.neonAuthUrl
 
   if (!baseUrl) {
-    console.error('NEON_AUTH_BASE_URL not configured')
+    console.error('NEON_AUTH_URL not configured')
     return null
   }
 

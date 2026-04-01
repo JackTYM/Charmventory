@@ -16,6 +16,12 @@ const USER_KEY = 'charmventory_user'
 const TOKEN_KEY = 'charmventory_token'
 const JWT_KEY = 'charmventory_jwt'  // JWT for Data API
 
+// Get auth base URL from runtime config or fallback
+function getAuthUrl(): string {
+  const config = useRuntimeConfig()
+  return config.public.neonAuthUrl || ''
+}
+
 export function useAuth() {
   // Use Nuxt's useState for SSR-safe state that persists across navigation
   const user = useState<User | null>('auth-user', () => null)
@@ -87,9 +93,14 @@ export function useAuth() {
       user.value = storedUser
     }
 
+    const authUrl = getAuthUrl()
+    if (!authUrl) {
+      loading.value = false
+      return null
+    }
+
     try {
-      // Try to verify session with server (will use cookies if available)
-      // Also send stored token as Authorization header for localhost without HTTPS
+      // Call Neon Auth directly
       const headers: Record<string, string> = {}
       const storedToken = getStoredToken()
       if (storedToken) {
@@ -97,7 +108,7 @@ export function useAuth() {
       }
 
       // Use native fetch to access response headers for JWT
-      const response = await fetch('/api/auth/get-session', {
+      const response = await fetch(`${authUrl}/get-session`, {
         credentials: 'include',
         headers
       })
@@ -141,8 +152,9 @@ export function useAuth() {
   }
 
   async function signUp(email: string, password: string, name: string) {
-    // Use native fetch to access response headers for JWT
-    const response = await fetch('/api/auth/sign-up/email', {
+    const authUrl = getAuthUrl()
+    // Call Neon Auth directly
+    const response = await fetch(`${authUrl}/sign-up/email`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -179,8 +191,9 @@ export function useAuth() {
   }
 
   async function signIn(email: string, password: string) {
-    // Use native fetch to access response headers for JWT
-    const response = await fetch('/api/auth/sign-in/email', {
+    const authUrl = getAuthUrl()
+    // Call Neon Auth directly
+    const response = await fetch(`${authUrl}/sign-in/email`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -217,8 +230,9 @@ export function useAuth() {
   }
 
   async function signOut() {
+    const authUrl = getAuthUrl()
     try {
-      await fetch('/api/auth/sign-out', {
+      await fetch(`${authUrl}/sign-out`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -260,6 +274,9 @@ export function useAuth() {
 
   // Refresh JWT by calling get-session (JWT expires in 15 min)
   async function refreshJwt(): Promise<string | null> {
+    const authUrl = getAuthUrl()
+    if (!authUrl) return null
+
     const headers: Record<string, string> = {}
     const storedToken = getStoredToken()
     if (storedToken) {
@@ -267,7 +284,7 @@ export function useAuth() {
     }
 
     try {
-      const response = await fetch('/api/auth/get-session', {
+      const response = await fetch(`${authUrl}/get-session`, {
         credentials: 'include',
         headers
       })

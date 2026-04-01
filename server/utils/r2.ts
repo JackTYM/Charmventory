@@ -1,17 +1,29 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
-const r2Client = new S3Client({
-  region: 'auto',
-  endpoint: process.env.R2_ENDPOINT,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-  },
-})
+let _r2Client: S3Client | null = null
+let _bucketName: string = ''
+let _publicUrl: string = ''
 
-const BUCKET_NAME = process.env.R2_BUCKET_NAME!
-const PUBLIC_URL = process.env.R2_PUBLIC_URL!
+function getR2Config() {
+  if (!_r2Client) {
+    const config = useRuntimeConfig()
+    if (!config.r2Endpoint || !config.r2AccessKeyId || !config.r2SecretAccessKey) {
+      throw new Error('R2 configuration incomplete')
+    }
+    _r2Client = new S3Client({
+      region: 'auto',
+      endpoint: config.r2Endpoint,
+      credentials: {
+        accessKeyId: config.r2AccessKeyId,
+        secretAccessKey: config.r2SecretAccessKey,
+      },
+    })
+    _bucketName = config.r2BucketName
+    _publicUrl = config.r2PublicUrl
+  }
+  return { client: _r2Client, bucketName: _bucketName, publicUrl: _publicUrl }
+}
 
 export interface UploadResult {
   key: string
@@ -26,9 +38,10 @@ export async function uploadToR2(
   key: string,
   contentType: string
 ): Promise<UploadResult> {
-  await r2Client.send(
+  const { client, bucketName, publicUrl } = getR2Config()
+  await client.send(
     new PutObjectCommand({
-      Bucket: BUCKET_NAME,
+      Bucket: bucketName,
       Key: key,
       Body: file,
       ContentType: contentType,
@@ -37,7 +50,7 @@ export async function uploadToR2(
 
   return {
     key,
-    url: `${PUBLIC_URL}/${key}`,
+    url: `${publicUrl}/${key}`,
   }
 }
 
@@ -45,9 +58,10 @@ export async function uploadToR2(
  * Delete a file from R2
  */
 export async function deleteFromR2(key: string): Promise<void> {
-  await r2Client.send(
+  const { client, bucketName } = getR2Config()
+  await client.send(
     new DeleteObjectCommand({
-      Bucket: BUCKET_NAME,
+      Bucket: bucketName,
       Key: key,
     })
   )
@@ -61,13 +75,14 @@ export async function getUploadPresignedUrl(
   contentType: string,
   expiresIn = 3600
 ): Promise<string> {
+  const { client, bucketName } = getR2Config()
   const command = new PutObjectCommand({
-    Bucket: BUCKET_NAME,
+    Bucket: bucketName,
     Key: key,
     ContentType: contentType,
   })
 
-  return getSignedUrl(r2Client, command, { expiresIn })
+  return getSignedUrl(client, command, { expiresIn })
 }
 
 /**
@@ -79,9 +94,9 @@ export async function getPresignedUploadUrl(
   expiresIn = 3600
 ): Promise<{ uploadUrl: string; publicUrl: string }> {
   const uploadUrl = await getUploadPresignedUrl(key, contentType, expiresIn)
-  const publicUrl = getPublicUrl(key)
+  const pubUrl = getPublicUrl(key)
 
-  return { uploadUrl, publicUrl }
+  return { uploadUrl, publicUrl: pubUrl }
 }
 
 /**
@@ -91,12 +106,13 @@ export async function getDownloadPresignedUrl(
   key: string,
   expiresIn = 3600
 ): Promise<string> {
+  const { client, bucketName } = getR2Config()
   const command = new GetObjectCommand({
-    Bucket: BUCKET_NAME,
+    Bucket: bucketName,
     Key: key,
   })
 
-  return getSignedUrl(r2Client, command, { expiresIn })
+  return getSignedUrl(client, command, { expiresIn })
 }
 
 /**
@@ -121,5 +137,6 @@ export function generateImageKey(
  * Get public URL for a key
  */
 export function getPublicUrl(key: string): string {
-  return `${PUBLIC_URL}/${key}`
+  const { publicUrl } = getR2Config()
+  return `${publicUrl}/${key}`
 }
