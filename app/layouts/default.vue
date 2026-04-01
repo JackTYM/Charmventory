@@ -12,7 +12,9 @@ const navItems = [
   { path: '/feed', label: 'Feed', icon: '📸' },
 ]
 
-const utilityItems: { path: string; label: string; icon: string }[] = []
+const utilityItems = [
+  { path: 'https://database.charmventory.com', label: 'Database', icon: '📚', external: true },
+]
 
 const isActive = (path: string) => {
   if (path === '/home') return route.path === '/home'
@@ -93,18 +95,15 @@ const handleLogout = async () => {
         <div class="border-t border-light-border dark:border-dark-border my-4"></div>
 
         <!-- Utility Items -->
-        <NuxtLink
+        <a
           v-for="item in utilityItems"
           :key="item.path"
-          :to="item.path"
-          class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200"
-          :class="isActive(item.path)
-            ? 'bg-rose-pale dark:bg-rose-glow text-rose-primary'
-            : 'text-muted dark:text-ash hover:bg-light-bg-alt dark:hover:bg-dark-elevated'"
+          :href="item.path"
+          class="flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-muted dark:text-ash hover:bg-light-bg-alt dark:hover:bg-dark-elevated"
         >
           <span class="text-xl">{{ item.icon }}</span>
           <span class="font-medium">{{ item.label }}</span>
-        </NuxtLink>
+        </a>
       </nav>
 
       <!-- User Section -->

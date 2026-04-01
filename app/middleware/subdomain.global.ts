@@ -19,12 +19,9 @@ export default defineNuxtRouteMiddleware((to) => {
 
   // app.charmventory.com - authenticated app
   if (host === 'app.charmventory.com') {
-    // Root shows home (authenticated dashboard)
-    if (to.path === '/') {
-      return navigateTo('/home')
-    }
-    // Don't show landing page on app subdomain
-    if (to.path === '/index') {
+    // Root (/) is handled by index.vue which shows HomeContent
+    // Redirect /home to / for clean URLs
+    if (to.path === '/home') {
       return navigateTo('/')
     }
     // Redirect /database to database subdomain

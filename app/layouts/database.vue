@@ -90,7 +90,7 @@ const isActive = (path: string) => {
             {{ isDark ? '🌙' : '☀️' }}
           </button>
           <a
-            href="/"
+            href="https://app.charmventory.com"
             class="text-sm text-rose-primary hover:underline hidden sm:block"
           >
             Charmventory App →
@@ -155,7 +155,7 @@ const isActive = (path: string) => {
 
         <div class="border-t border-light-border dark:border-dark-border pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted dark:text-ash">
           <p>&copy; {{ new Date().getFullYear() }} Pandora Database. Part of the Charmventory project.</p>
-          <a href="/" class="text-rose-primary hover:underline">
+          <a href="https://app.charmventory.com" class="text-rose-primary hover:underline">
             Back to Charmventory App
           </a>
         </div>

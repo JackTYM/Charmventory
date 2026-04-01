@@ -1,7 +1,27 @@
 <script setup lang="ts">
-definePageMeta({
-  layout: 'landing'
+// Detect if we're on the app subdomain
+const isAppSubdomain = ref(false)
+
+onMounted(() => {
+  const host = window.location.hostname
+  isAppSubdomain.value = host === 'app.charmventory.com'
+  // Set layout based on subdomain
+  if (isAppSubdomain.value) {
+    setPageLayout('default')
+  } else {
+    setPageLayout('landing')
+  }
 })
+
+// Handle unauthenticated on app subdomain
+function handleUnauthenticated() {
+  const host = window.location.hostname
+  if (host === 'app.charmventory.com') {
+    window.location.href = 'https://charmventory.com/auth/login'
+  } else {
+    navigateTo('/auth/login')
+  }
+}
 
 const features = [
   {
@@ -38,7 +58,11 @@ const features = [
 </script>
 
 <template>
-  <div class="min-h-screen bg-rose-pale dark:bg-dark-bg">
+  <!-- App subdomain: show home dashboard -->
+  <HomeContent v-if="isAppSubdomain" @unauthenticated="handleUnauthenticated" />
+
+  <!-- Root domain: show landing page -->
+  <div v-else class="min-h-screen bg-rose-pale dark:bg-dark-bg">
     <!-- Hero Section -->
     <section>
       <div class="px-4 py-16 lg:py-24 max-w-6xl mx-auto">
