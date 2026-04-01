@@ -82,7 +82,7 @@ const handleLogout = async () => {
     <aside class="hidden lg:flex lg:fixed lg:left-0 lg:top-0 lg:h-full lg:w-64 lg:flex-col bg-light-card dark:bg-dark-card border-r border-light-border dark:border-dark-border">
       <!-- Logo -->
       <div class="p-6 border-b border-light-border dark:border-dark-border">
-        <img src="/logo.png" alt="Charmventory" class="h-12 w-auto dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]" />
+        <img src="/logo.png" alt="Charmventory" class="h-12 w-auto dark:brightness-125 dark:drop-shadow-[0_0_12px_rgba(255,255,255,0.6)]" />
       </div>
 
       <!-- Nav Items -->
@@ -186,7 +186,7 @@ const handleLogout = async () => {
     <!-- Mobile Header -->
     <header class="lg:hidden fixed top-0 left-0 right-0 z-40 bg-light-card/80 dark:bg-dark-card/80 backdrop-blur-lg border-b border-light-border dark:border-dark-border">
       <div class="flex items-center justify-between px-4 py-3">
-        <img src="/logo.png" alt="Charmventory" class="h-8 w-auto dark:drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]" />
+        <img src="/logo.png" alt="Charmventory" class="h-8 w-auto dark:brightness-125 dark:drop-shadow-[0_0_12px_rgba(255,255,255,0.6)]" />
         <div class="flex items-center gap-2">
           <button
             @click="toggleDark"

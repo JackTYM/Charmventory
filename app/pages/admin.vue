@@ -61,10 +61,8 @@ const runningScraperName = ref<string | null>(null)
 onMounted(async () => {
   await checkSession()
   if (isAdmin.value) {
-    await Promise.all([
-      loadPendingRevisions(),
-      loadScrapers(),
-    ])
+    await loadPendingRevisions()
+    // loadScrapers() - disabled until API is implemented
   }
   loading.value = false
 })
@@ -211,27 +209,17 @@ function formatDate(dateStr: string) {
               <p class="text-sm text-muted dark:text-ash">Pending Reviews</p>
             </div>
           </div>
-          <div class="flex items-center gap-4">
-            <div class="text-4xl">🤖</div>
-            <div>
-              <p class="text-2xl font-display text-ink dark:text-pearl">{{ scrapers.length }}</p>
-              <p class="text-sm text-muted dark:text-ash">Scrapers</p>
-            </div>
-          </div>
         </div>
       </section>
 
-      <!-- Tabs -->
+      <!-- Tabs - Scrapers tab hidden until API is implemented -->
       <div class="flex gap-2 mb-6">
         <button
-          @click="activeTab = 'revisions'"
-          class="px-4 py-2 rounded-lg font-medium transition-colors"
-          :class="activeTab === 'revisions'
-            ? 'bg-rose-primary text-white'
-            : 'bg-light-card dark:bg-dark-card text-muted dark:text-ash hover:text-ink dark:hover:text-pearl'"
+          class="px-4 py-2 rounded-lg font-medium transition-colors bg-rose-primary text-white"
         >
           Pending Reviews ({{ pendingRevisions.length }})
         </button>
+        <!-- TODO: Uncomment when /api/admin/scrapers is implemented
         <button
           @click="activeTab = 'scrapers'"
           class="px-4 py-2 rounded-lg font-medium transition-colors"
@@ -241,10 +229,11 @@ function formatDate(dateStr: string) {
         >
           Scrapers
         </button>
+        -->
       </div>
 
-      <!-- Scrapers Section -->
-      <section v-if="activeTab === 'scrapers'" class="bg-light-card dark:bg-dark-card rounded-lg shadow-card overflow-hidden mb-8">
+      <!-- Scrapers Section - hidden until API is implemented -->
+      <section v-if="false && activeTab === 'scrapers'" class="bg-light-card dark:bg-dark-card rounded-lg shadow-card overflow-hidden mb-8">
         <h3 class="p-4 font-display text-lg text-ink dark:text-pearl border-b border-light-border dark:border-dark-border">
           Data Scrapers
         </h3>
