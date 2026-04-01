@@ -1,8 +1,4 @@
 <script setup lang="ts">
-definePageMeta({
-  layout: 'database'
-})
-
 import { useAuth } from '~/composables/useAuth'
 
 const { user, checkSession } = useAuth()
