@@ -23,9 +23,16 @@ function extractNeonAuthCookies(cookieHeader: string | null): string {
 }
 
 export default defineEventHandler(async (event) => {
-  const baseUrl = process.env.NEON_AUTH_BASE_URL || process.env.NEON_AUTH_URL
+  const config = useRuntimeConfig(event)
+  const baseUrl = config.neonAuthBaseUrl || config.public?.neonAuthUrl || process.env.NEON_AUTH_BASE_URL || process.env.NEON_AUTH_URL
+
+  console.log('[Auth Proxy] Config:', JSON.stringify({
+    hasBaseUrl: !!baseUrl,
+    baseUrlPrefix: baseUrl?.substring(0, 30)
+  }))
 
   if (!baseUrl) {
+    console.error('[Auth Proxy] No auth URL configured')
     throw createError({
       statusCode: 500,
       message: 'NEON_AUTH_BASE_URL or NEON_AUTH_URL environment variable is required'
@@ -100,12 +107,16 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
+    console.log('[Auth Proxy] Fetching:', upstreamUrl.toString(), method)
+
     // Make the request to Neon Auth
     const response = await fetch(upstreamUrl.toString(), {
       method,
       headers: requestHeaders,
       body
     })
+
+    console.log('[Auth Proxy] Response status:', response.status)
 
     // Copy allowed response headers
     for (const header of RESPONSE_HEADERS_ALLOWLIST) {

@@ -102,6 +102,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // Server-only config (not exposed to client)
     databaseUrl: process.env.DATABASE_URL,
+    neonAuthBaseUrl: process.env.NEON_AUTH_URL || process.env.NEON_AUTH_BASE_URL || '',
     public: {
       neonAuthUrl: process.env.NEON_AUTH_URL || '',
       neonDataApiUrl: process.env.NEON_DATA_API_URL || '',
