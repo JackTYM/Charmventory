@@ -93,25 +93,41 @@ export function useSellers() {
     error.value = null
 
     try {
+      // Fetch user lists without join to avoid ambiguity
       const { data, error: queryError } = await from('user_seller_lists')
-        .select('*, sellers(*)')
+        .select('*')
 
       if (queryError) throw new Error(queryError.message)
+      if (!data || data.length === 0) {
+        userLists.value = { preferred: [], doNotBuy: [] }
+        return
+      }
 
-      const lists = (data || []).map((row: any) => ({
-        id: row.id,
-        sellerId: row.seller_id,
-        listType: row.list_type as 'preferred' | 'do_not_buy',
-        notes: row.notes || undefined,
-        seller: row.sellers ? {
-          id: row.sellers.id,
-          name: row.sellers.name,
-          sourceType: row.sellers.source_type,
-          platform: row.sellers.platform || 'other',
-          url: row.sellers.url,
-          createdAt: row.sellers.created_at,
-        } : undefined,
-      }))
+      // Fetch sellers separately
+      const sellerIds = [...new Set((data as any[]).map(row => row.seller_id))]
+      const { data: sellersData } = await from('sellers')
+        .select('*')
+        .in('id', sellerIds)
+
+      const sellersMap = new Map((sellersData || []).map((s: any) => [s.id, s]))
+
+      const lists = (data as any[]).map((row: any) => {
+        const seller = sellersMap.get(row.seller_id)
+        return {
+          id: row.id,
+          sellerId: row.seller_id,
+          listType: row.list_type as 'preferred' | 'do_not_buy',
+          notes: row.notes || undefined,
+          seller: seller ? {
+            id: seller.id,
+            name: seller.name,
+            sourceType: seller.source_type,
+            platform: seller.platform || 'other',
+            url: seller.url,
+            createdAt: seller.created_at,
+          } : undefined,
+        }
+      })
 
       userLists.value = {
         preferred: lists.filter((l: UserSellerList) => l.listType === 'preferred'),
@@ -161,6 +177,7 @@ export function useSellers() {
         throw new Error('Must be logged in to add to list')
       }
 
+      // Insert the list entry
       const { data: result, error: insertError } = await from('user_seller_lists')
         .insert({
           user_id: user.value.id,
@@ -168,10 +185,16 @@ export function useSellers() {
           list_type: listType,
           notes,
         })
-        .select('*, sellers(*)')
+        .select('*')
         .single()
 
       if (insertError) throw new Error(insertError.message)
+
+      // Fetch seller data separately to avoid join ambiguity
+      const { data: sellerData } = await from('sellers')
+        .select('*')
+        .eq('id', sellerId)
+        .single()
 
       const row = result as any
       const newEntry: UserSellerList = {
@@ -179,13 +202,13 @@ export function useSellers() {
         sellerId: row.seller_id,
         listType: row.list_type,
         notes: row.notes || undefined,
-        seller: row.sellers ? {
-          id: row.sellers.id,
-          name: row.sellers.name,
-          sourceType: row.sellers.source_type,
-          platform: row.sellers.platform || 'other',
-          url: row.sellers.url,
-          createdAt: row.sellers.created_at,
+        seller: sellerData ? {
+          id: sellerData.id,
+          name: sellerData.name,
+          sourceType: sellerData.source_type,
+          platform: sellerData.platform || 'other',
+          url: sellerData.url,
+          createdAt: sellerData.created_at,
         } : undefined,
       }
 
