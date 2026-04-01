@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { useDataApi, type DbWishlistItem, type DbWishlistLink, type DbWishlistImage } from './useDataApi'
+import { useAuth } from './useAuth'
 
 interface WishlistLink {
   id: string
@@ -170,7 +171,13 @@ export function useWishlist() {
     error.value = null
 
     try {
+      const { user } = useAuth()
+      if (!user.value?.id) {
+        throw new Error('Must be logged in to create wishlist items')
+      }
+
       const dbData: Partial<DbWishlistItem> = {
+        user_id: user.value.id,
         name: data.name!,
         item_number: data.itemNumber,
         collection: data.collection,

@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { useDataApi, type DbPost, type DbPostImage, type DbUser } from './useDataApi'
+import { useAuth } from './useAuth'
 
 interface PostImage {
   id: string
@@ -133,9 +134,15 @@ export function useFeed() {
     error.value = null
 
     try {
+      const { user } = useAuth()
+      if (!user.value?.id) {
+        throw new Error('Must be logged in to create posts')
+      }
+
       // Create the post
       const { data: postResult, error: postError } = await from('posts')
         .insert({
+          user_id: user.value.id,
           content: data.content,
           post_type: data.postType,
         })

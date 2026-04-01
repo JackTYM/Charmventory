@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { useDataApi, type DbItem, type DbItemImage } from './useDataApi'
+import { useAuth } from './useAuth'
 
 interface ItemImage {
   id: string
@@ -147,7 +148,15 @@ export function useItems() {
     error.value = null
 
     try {
-      const dbData = toDbItem(data)
+      const { user } = useAuth()
+      if (!user.value?.id) {
+        throw new Error('Must be logged in to create items')
+      }
+
+      const dbData = {
+        ...toDbItem(data),
+        user_id: user.value.id,
+      }
 
       const { data: result, error: createError } = await from('items')
         .insert(dbData)

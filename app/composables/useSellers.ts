@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { useDataApi, type DbSeller, type DbSellerReview, type DbUserSellerList } from './useDataApi'
+import { useAuth } from './useAuth'
 
 interface SellerReview {
   id: string
@@ -155,8 +156,14 @@ export function useSellers() {
 
   async function addToList(sellerId: string, listType: 'preferred' | 'do_not_buy', notes?: string) {
     try {
+      const { user } = useAuth()
+      if (!user.value?.id) {
+        throw new Error('Must be logged in to add to list')
+      }
+
       const { data: result, error: insertError } = await from('user_seller_lists')
         .insert({
+          user_id: user.value.id,
           seller_id: sellerId,
           list_type: listType,
           notes,
@@ -212,8 +219,14 @@ export function useSellers() {
 
   async function addReview(sellerId: string, isVouch: boolean, message?: string) {
     try {
+      const { user } = useAuth()
+      if (!user.value?.id) {
+        throw new Error('Must be logged in to add review')
+      }
+
       const { data: result, error: insertError } = await from('seller_reviews')
         .insert({
+          user_id: user.value.id,
           seller_id: sellerId,
           is_vouch: isVouch,
           message,
