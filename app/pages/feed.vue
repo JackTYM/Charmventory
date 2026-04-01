@@ -8,6 +8,7 @@ const { posts, fetchPosts, deletePost, loading: feedLoading, hasMore, clearPosts
 const postToDelete = ref<string | null>(null)
 const showDeleteConfirm = ref(false)
 const deleting = ref(false)
+const fullscreenImage = ref<string | null>(null)
 
 const postTypes = [
   { value: '', label: 'All Posts' },
@@ -163,41 +164,49 @@ async function handleDeletePost() {
 
         <!-- Images -->
         <div v-if="post.images.length > 0" class="relative">
-          <div v-if="post.images.length === 1" class="aspect-square">
+          <div v-if="post.images.length === 1" class="aspect-square cursor-pointer group" @click="fullscreenImage = post.images[0].url">
             <img :src="post.images[0].url" :alt="post.images[0].caption || ''" class="w-full h-full object-cover" />
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+              <span class="opacity-0 group-hover:opacity-100 text-white text-sm font-medium transition-opacity">Click to expand</span>
+            </div>
           </div>
           <div v-else class="flex overflow-x-auto snap-x snap-mandatory">
             <div
               v-for="(image, i) in post.images"
               :key="image.id"
-              class="flex-shrink-0 w-full aspect-square snap-center"
+              class="flex-shrink-0 w-full aspect-square snap-center cursor-pointer group relative"
+              @click="fullscreenImage = image.url"
             >
               <img :src="image.url" :alt="image.caption || ''" class="w-full h-full object-cover" />
+              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                <span class="opacity-0 group-hover:opacity-100 text-white text-sm font-medium transition-opacity">Click to expand</span>
+              </div>
             </div>
           </div>
-          <div v-if="post.images.length > 1" class="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+          <div v-if="post.images.length > 1" class="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded pointer-events-none">
             {{ post.images.length }} photos
           </div>
         </div>
 
         <!-- Content -->
-        <div class="p-4">
+        <NuxtLink :to="`/post/${post.id}`" class="block p-4 hover:bg-light-bg/50 dark:hover:bg-dark-bg/50 transition-colors">
           <p v-if="post.content" class="text-ink dark:text-pearl whitespace-pre-wrap">
             {{ post.content }}
           </p>
+          <p v-else class="text-muted dark:text-ash text-sm">View post</p>
 
           <!-- Item Tags -->
-          <div v-if="post.itemTags.length > 0" class="mt-3 flex flex-wrap gap-2">
+          <div v-if="post.itemTags.length > 0" class="mt-3 flex flex-wrap gap-2" @click.stop>
             <NuxtLink
               v-for="tag in post.itemTags"
               :key="tag.id"
-              :to="`/search?item=${tag.itemNumber}`"
+              :to="`/catalog?search=${tag.itemNumber}`"
               class="tag tag-default text-xs"
             >
               #{{ tag.itemNumber }}
             </NuxtLink>
           </div>
-        </div>
+        </NuxtLink>
       </article>
 
       <!-- Load More -->
@@ -246,6 +255,27 @@ async function handleDeletePost() {
             </button>
           </div>
         </div>
+      </div>
+    </Teleport>
+
+    <!-- Fullscreen Image Modal -->
+    <Teleport to="body">
+      <div
+        v-if="fullscreenImage"
+        class="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+        @click="fullscreenImage = null"
+      >
+        <button
+          class="absolute top-4 right-4 text-white/80 hover:text-white text-3xl z-10"
+          @click="fullscreenImage = null"
+        >
+          &times;
+        </button>
+        <img
+          :src="fullscreenImage"
+          class="max-w-full max-h-full object-contain"
+          @click.stop
+        />
       </div>
     </Teleport>
   </div>
