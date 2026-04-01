@@ -14,11 +14,21 @@ const confirmPassword = ref('')
 const error = ref('')
 const loading = ref(false)
 
+// Redirect to app subdomain (or /home in dev)
+function getAppUrl(path: string = '/') {
+  const host = window.location.hostname
+  if (host === 'charmventory.com' || host === 'www.charmventory.com') {
+    return `https://app.charmventory.com${path}`
+  }
+  // Local dev
+  return '/home'
+}
+
 // Check if already logged in
 onMounted(async () => {
   await checkSession()
   if (isAuthenticated.value) {
-    navigateTo('/home')
+    window.location.href = getAppUrl()
   }
 })
 
@@ -43,8 +53,8 @@ async function handleSubmit() {
 
   try {
     await signUp(email.value, password.value, name.value)
-    // Use full page reload to avoid HMR state issues in dev
-    window.location.href = '/home'
+    // Redirect to app subdomain
+    window.location.href = getAppUrl()
   } catch (e: any) {
     error.value = e.data?.message || e.message || 'Failed to create account'
   } finally {
