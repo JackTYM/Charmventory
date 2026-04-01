@@ -9,6 +9,7 @@ const { from } = useDataApi()
 const item = ref<any>(null)
 const loading = ref(true)
 const error = ref('')
+const databaseEntry = ref<any>(null)
 
 onMounted(async () => {
   await checkSession()
@@ -18,6 +19,20 @@ onMounted(async () => {
   }
   await fetchItem()
 })
+
+async function checkDatabaseEntry(styleId: string) {
+  if (!styleId) return
+  try {
+    const { data } = await from('charm_database')
+      .select('style_id, name')
+      .eq('style_id', styleId)
+      .single()
+    databaseEntry.value = data
+  } catch {
+    // Not found in database
+    databaseEntry.value = null
+  }
+}
 
 async function fetchItem() {
   loading.value = true
@@ -82,6 +97,11 @@ async function fetchItem() {
         category: img.category,
         caption: img.caption,
       })),
+    }
+
+    // Check if item exists in charm database
+    if (row.item_number) {
+      await checkDatabaseEntry(row.item_number)
     }
   } catch (e: any) {
     error.value = e.message || 'Failed to load item'
@@ -222,9 +242,19 @@ const conditionLabels: Record<string, string> = {
         <section class="bg-light-card dark:bg-dark-card rounded-lg p-5 shadow-card">
           <h3 class="font-display text-lg text-ink dark:text-pearl mb-4">Details</h3>
           <dl class="space-y-3 text-sm">
-            <div v-if="item.itemNumber" class="flex justify-between">
+            <div v-if="item.itemNumber" class="flex justify-between items-center">
               <dt class="text-muted dark:text-ash">Item Number</dt>
-              <dd class="text-ink dark:text-pearl font-medium">{{ item.itemNumber }}</dd>
+              <dd class="text-ink dark:text-pearl font-medium flex items-center gap-2">
+                {{ item.itemNumber }}
+                <NuxtLink
+                  v-if="databaseEntry"
+                  :to="`/database/${item.itemNumber}`"
+                  class="text-xs px-2 py-0.5 rounded bg-rose-primary/10 text-rose-primary hover:bg-rose-primary/20 transition-colors"
+                  title="View in Charm Database"
+                >
+                  View in Database
+                </NuxtLink>
+              </dd>
             </div>
             <div v-if="item.collection" class="flex justify-between">
               <dt class="text-muted dark:text-ash">Collection</dt>

@@ -2,10 +2,12 @@
 import { useAuth } from '~/composables/useAuth'
 import { useItems } from '~/composables/useItems'
 import { useUpload } from '~/composables/useUpload'
+import { useDataApi } from '~/composables/useDataApi'
 
 const { isAuthenticated, checkSession, loading: authLoading } = useAuth()
 const { createItem, addImage } = useItems()
 const { uploadImage } = useUpload()
+const { from } = useDataApi()
 
 // Check auth on mount
 onMounted(async () => {
@@ -171,6 +173,124 @@ const form = reactive({
 const loading = ref(false)
 const error = ref('')
 
+// Database suggestion
+const dbSuggestion = ref<{
+  name?: string
+  releaseDate?: string
+  originalPrice?: number
+  collection?: string
+  type?: string
+  materials?: string
+  isLimited?: boolean
+} | null>(null)
+const lookingUp = ref(false)
+
+// Debounced lookup for style ID
+let lookupTimeout: ReturnType<typeof setTimeout> | null = null
+
+watch(() => form.itemNumber, (styleId) => {
+  if (lookupTimeout) clearTimeout(lookupTimeout)
+  dbSuggestion.value = null
+
+  if (!styleId || styleId.length < 3) return
+
+  lookupTimeout = setTimeout(async () => {
+    lookingUp.value = true
+    try {
+      // Check charm_database first
+      const { data: dbEntry } = await from('charm_database')
+        .select('name, release_date, original_price, collection, type, materials, is_limited')
+        .eq('style_id', styleId)
+        .single()
+
+      if (dbEntry) {
+        dbSuggestion.value = {
+          name: dbEntry.name || undefined,
+          releaseDate: dbEntry.release_date ? new Date(dbEntry.release_date).toISOString().split('T')[0] : undefined,
+          originalPrice: dbEntry.original_price ? parseFloat(dbEntry.original_price) : undefined,
+          collection: dbEntry.collection || undefined,
+          type: dbEntry.type || undefined,
+          materials: dbEntry.materials || undefined,
+          isLimited: dbEntry.is_limited || undefined,
+        }
+      } else {
+        // Fall back to charm_sightings for first seen data
+        const { data: sighting } = await from('charm_sightings')
+          .select('extracted_name, extracted_price, extracted_currency, year, season')
+          .eq('style_id', styleId)
+          .order('year', { ascending: true })
+          .limit(1)
+          .single()
+
+        if (sighting) {
+          const releaseYear = sighting.year
+          const releaseSeason = sighting.season
+          let releaseDate = undefined
+          if (releaseYear) {
+            // Approximate release date from year/season
+            const monthMap: Record<string, string> = {
+              'Spring': '03', 'Summer': '06', 'Autumn': '09', 'Fall': '09', 'Winter': '12'
+            }
+            const month = releaseSeason ? (monthMap[releaseSeason] || '01') : '01'
+            releaseDate = `${releaseYear}-${month}-01`
+          }
+
+          dbSuggestion.value = {
+            name: sighting.extracted_name || undefined,
+            releaseDate,
+            originalPrice: sighting.extracted_price && sighting.extracted_currency === 'USD'
+              ? parseFloat(sighting.extracted_price)
+              : undefined,
+          }
+        }
+      }
+    } catch {
+      // Not found - no suggestion
+    } finally {
+      lookingUp.value = false
+    }
+  }, 500)
+})
+
+function applyDbSuggestion(field: 'name' | 'releaseDate' | 'originalPrice' | 'collection' | 'type' | 'materials' | 'isLimited') {
+  if (!dbSuggestion.value) return
+
+  switch (field) {
+    case 'name':
+      if (dbSuggestion.value.name) form.name = dbSuggestion.value.name
+      break
+    case 'releaseDate':
+      if (dbSuggestion.value.releaseDate) form.catalogueRelease = dbSuggestion.value.releaseDate
+      break
+    case 'originalPrice':
+      if (dbSuggestion.value.originalPrice) form.originalPrice = dbSuggestion.value.originalPrice
+      break
+    case 'collection':
+      if (dbSuggestion.value.collection) form.collection = dbSuggestion.value.collection
+      break
+    case 'type':
+      if (dbSuggestion.value.type) form.type = dbSuggestion.value.type
+      break
+    case 'materials':
+      if (dbSuggestion.value.materials) form.materials = dbSuggestion.value.materials
+      break
+    case 'isLimited':
+      if (dbSuggestion.value.isLimited !== undefined) form.isLimited = dbSuggestion.value.isLimited
+      break
+  }
+}
+
+function applyAllSuggestions() {
+  if (!dbSuggestion.value) return
+  if (dbSuggestion.value.name && !form.name) form.name = dbSuggestion.value.name
+  if (dbSuggestion.value.releaseDate && !form.catalogueRelease) form.catalogueRelease = dbSuggestion.value.releaseDate
+  if (dbSuggestion.value.originalPrice && !form.originalPrice) form.originalPrice = dbSuggestion.value.originalPrice
+  if (dbSuggestion.value.collection && !form.collection) form.collection = dbSuggestion.value.collection
+  if (dbSuggestion.value.type) form.type = dbSuggestion.value.type
+  if (dbSuggestion.value.materials && !form.materials) form.materials = dbSuggestion.value.materials
+  if (dbSuggestion.value.isLimited !== undefined) form.isLimited = dbSuggestion.value.isLimited
+}
+
 // Image upload
 const imageFiles = ref<File[]>([])
 const imageUrls = ref<string[]>([])
@@ -329,7 +449,90 @@ async function handleSubmit() {
             </div>
             <div>
               <label class="block text-sm font-medium text-ink dark:text-pearl mb-1">Item Number</label>
-              <input v-model="form.itemNumber" type="text" class="form-input" placeholder="Style ID" />
+              <div class="relative">
+                <input v-model="form.itemNumber" type="text" class="form-input" placeholder="Style ID" />
+                <span v-if="lookingUp" class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted">...</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Database Suggestions -->
+          <div v-if="dbSuggestion" class="p-3 bg-gold-primary/10 border border-gold-primary/30 rounded-lg">
+            <div class="flex items-center justify-between mb-2">
+              <p class="text-sm font-medium text-ink dark:text-pearl">Found in Database</p>
+              <button
+                type="button"
+                @click="applyAllSuggestions"
+                class="text-xs px-2 py-1 bg-gold-primary/20 hover:bg-gold-primary/30 text-gold-primary rounded transition-colors"
+              >
+                Apply All
+              </button>
+            </div>
+            <p class="text-xs text-muted dark:text-ash mb-2">Data may be incomplete or incorrect. Click to autofill.</p>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-if="dbSuggestion.name"
+                type="button"
+                @click="applyDbSuggestion('name')"
+                class="text-xs px-2 py-1 bg-light-bg dark:bg-dark-bg rounded hover:bg-rose-primary/10 transition-colors"
+                :class="form.name === dbSuggestion.name ? 'ring-1 ring-green-500' : ''"
+              >
+                Name: {{ dbSuggestion.name }}
+              </button>
+              <button
+                v-if="dbSuggestion.collection"
+                type="button"
+                @click="applyDbSuggestion('collection')"
+                class="text-xs px-2 py-1 bg-light-bg dark:bg-dark-bg rounded hover:bg-rose-primary/10 transition-colors"
+                :class="form.collection === dbSuggestion.collection ? 'ring-1 ring-green-500' : ''"
+              >
+                Collection: {{ dbSuggestion.collection }}
+              </button>
+              <button
+                v-if="dbSuggestion.type"
+                type="button"
+                @click="applyDbSuggestion('type')"
+                class="text-xs px-2 py-1 bg-light-bg dark:bg-dark-bg rounded hover:bg-rose-primary/10 transition-colors"
+                :class="form.type === dbSuggestion.type ? 'ring-1 ring-green-500' : ''"
+              >
+                Type: {{ dbSuggestion.type }}
+              </button>
+              <button
+                v-if="dbSuggestion.releaseDate"
+                type="button"
+                @click="applyDbSuggestion('releaseDate')"
+                class="text-xs px-2 py-1 bg-light-bg dark:bg-dark-bg rounded hover:bg-rose-primary/10 transition-colors"
+                :class="form.catalogueRelease === dbSuggestion.releaseDate ? 'ring-1 ring-green-500' : ''"
+              >
+                Release: {{ dbSuggestion.releaseDate }}
+              </button>
+              <button
+                v-if="dbSuggestion.originalPrice"
+                type="button"
+                @click="applyDbSuggestion('originalPrice')"
+                class="text-xs px-2 py-1 bg-light-bg dark:bg-dark-bg rounded hover:bg-rose-primary/10 transition-colors"
+                :class="form.originalPrice === dbSuggestion.originalPrice ? 'ring-1 ring-green-500' : ''"
+              >
+                Price: ${{ dbSuggestion.originalPrice }}
+              </button>
+              <button
+                v-if="dbSuggestion.materials"
+                type="button"
+                @click="applyDbSuggestion('materials')"
+                class="text-xs px-2 py-1 bg-light-bg dark:bg-dark-bg rounded hover:bg-rose-primary/10 transition-colors"
+                :class="form.materials === dbSuggestion.materials ? 'ring-1 ring-green-500' : ''"
+              >
+                Materials: {{ dbSuggestion.materials }}
+              </button>
+              <button
+                v-if="dbSuggestion.isLimited"
+                type="button"
+                @click="applyDbSuggestion('isLimited')"
+                class="text-xs px-2 py-1 bg-light-bg dark:bg-dark-bg rounded hover:bg-rose-primary/10 transition-colors"
+                :class="form.isLimited === dbSuggestion.isLimited ? 'ring-1 ring-green-500' : ''"
+              >
+                Limited Edition
+              </button>
             </div>
           </div>
 
