@@ -10,6 +10,7 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
     '@nuxtjs/google-fonts',
     '@vite-pwa/nuxt',
+    'nitro-cloudflare-dev',  // Local dev with Cloudflare bindings
   ],
 
   css: ['~/assets/css/main.css'],
