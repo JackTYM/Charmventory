@@ -495,7 +495,7 @@ async function handleSubmit() {
                 class="text-xs px-2 py-1 bg-light-bg dark:bg-dark-bg rounded hover:bg-rose-primary/10 transition-colors"
                 :class="form.type === dbSuggestion.type ? 'ring-1 ring-green-500' : ''"
               >
-                Type: {{ dbSuggestion.type }}
+                Type: {{ dbSuggestion.type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') }}
               </button>
               <button
                 v-if="dbSuggestion.releaseDate"
