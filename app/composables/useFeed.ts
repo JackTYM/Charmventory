@@ -51,9 +51,9 @@ export function useFeed() {
       const limit = options.limit || 20
       const offset = options.offset || 0
 
-      // Build query
+      // Build query - fetch posts with images and tags (no FK join for users)
       let query = from('posts')
-        .select('*, users!posts_user_id_fkey(id, name, avatar), post_images(*), post_item_tags(*)')
+        .select('*, post_images(*), post_item_tags(*)')
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1)
 
@@ -68,27 +68,38 @@ export function useFeed() {
 
       if (queryError) throw new Error(queryError.message)
 
-      const newPosts: Post[] = (data || []).map((row: any) => ({
-        id: row.id,
-        userId: row.user_id,
-        user: {
-          id: row.users?.id || row.user_id,
-          name: row.users?.name,
-          avatar: row.users?.avatar,
-        },
-        content: row.content || undefined,
-        postType: row.post_type || undefined,
-        images: (row.post_images || []).map((img: any) => ({
-          id: img.id,
-          url: img.url,
-          caption: img.caption || undefined,
-        })),
-        itemTags: (row.post_item_tags || []).map((tag: any) => ({
-          id: tag.id,
-          itemNumber: tag.item_number,
-        })),
-        createdAt: row.created_at,
-      }))
+      // Get unique user IDs and fetch user data separately
+      const userIds = [...new Set((data || []).map((row: any) => row.user_id))]
+      const { data: usersData } = userIds.length > 0
+        ? await from('users').select('id, name, avatar').in('id', userIds)
+        : { data: [] }
+
+      const usersMap = new Map((usersData || []).map((u: any) => [u.id, u]))
+
+      const newPosts: Post[] = (data || []).map((row: any) => {
+        const user = usersMap.get(row.user_id)
+        return {
+          id: row.id,
+          userId: row.user_id,
+          user: {
+            id: user?.id || row.user_id,
+            name: user?.name,
+            avatar: user?.avatar,
+          },
+          content: row.content || undefined,
+          postType: row.post_type || undefined,
+          images: (row.post_images || []).map((img: any) => ({
+            id: img.id,
+            url: img.url,
+            caption: img.caption || undefined,
+          })),
+          itemTags: (row.post_item_tags || []).map((tag: any) => ({
+            id: tag.id,
+            itemNumber: tag.item_number,
+          })),
+          createdAt: row.created_at,
+        }
+      })
 
       // Filter by itemNumber if specified (post-filter since it's in related table)
       let filteredPosts = newPosts
@@ -160,20 +171,27 @@ export function useFeed() {
 
       // Fetch the complete post with relations
       const { data: fullPost, error: fetchError } = await from('posts')
-        .select('*, users!posts_user_id_fkey(id, name, avatar), post_images(*), post_item_tags(*)')
+        .select('*, post_images(*), post_item_tags(*)')
         .eq('id', postId)
         .single()
 
       if (fetchError) throw new Error(fetchError.message)
 
       const row = fullPost as any
+
+      // Fetch user data separately
+      const { data: userData } = await from('users')
+        .select('id, name, avatar')
+        .eq('id', row.user_id)
+        .single()
+
       const newPost: Post = {
         id: row.id,
         userId: row.user_id,
         user: {
-          id: row.users?.id || row.user_id,
-          name: row.users?.name,
-          avatar: row.users?.avatar,
+          id: userData?.id || row.user_id,
+          name: userData?.name,
+          avatar: userData?.avatar,
         },
         content: row.content || undefined,
         postType: row.post_type || undefined,
