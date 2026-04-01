@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { useAuth } from '~/composables/useAuth'
 import { useFeed } from '~/composables/useFeed'
-import { useCharmDatabase } from '~/composables/useCharmDatabase'
+import { useDataApi } from '~/composables/useDataApi'
 
 const route = useRoute()
 const { user: currentUser, isAuthenticated, checkSession } = useAuth()
 const { posts, fetchPosts, clearPosts } = useFeed()
-
-// Use anonymous client for public profile data
-const { getClient } = useCharmDatabase()
+const { from } = useDataApi()
 
 const profileId = computed(() => route.params.id as string)
 const isOwnProfile = computed(() => currentUser.value?.id === profileId.value)
@@ -49,15 +47,49 @@ async function loadProfile() {
   error.value = ''
 
   try {
-    // Use server API for public profile data
-    const userData = await $fetch(`/api/users/${profileId.value}`)
+    // Try to find user by slug first, then by ID
+    let { data: users, error: userError } = await from('users')
+      .select('id,name,avatar,bio,social_links,created_at')
+      .eq('slug', profileId.value)
+      .limit(1)
+
+    if (!users?.length) {
+      // Try by ID
+      const result = await from('users')
+        .select('id,name,avatar,bio,social_links,created_at')
+        .eq('id', profileId.value)
+        .limit(1)
+      users = result.data
+      userError = result.error
+    }
+
+    if (userError) throw new Error(userError.message)
+    if (!users?.length) throw new Error('Profile not found')
+
+    const userData = users[0]
+
+    // Fetch privacy settings
+    const { data: privacyData } = await from('profile_privacy')
+      .select('*')
+      .eq('user_id', userData.id)
+      .limit(1)
+    const privacy = privacyData?.[0] || {}
+
+    // Fetch counts
+    const { count: itemCount } = await from('items')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userData.id)
+
+    const { count: postCount } = await from('posts')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userData.id)
 
     // Parse social links
     let socialLinks = {}
-    if (userData.socialLinks) {
-      socialLinks = typeof userData.socialLinks === 'string'
-        ? JSON.parse(userData.socialLinks)
-        : userData.socialLinks
+    if (userData.social_links) {
+      socialLinks = typeof userData.social_links === 'string'
+        ? JSON.parse(userData.social_links)
+        : userData.social_links
     }
 
     profile.value = {
@@ -66,20 +98,20 @@ async function loadProfile() {
       avatar: userData.avatar,
       bio: userData.bio,
       socialLinks,
-      itemCount: userData.itemCount || 0,
-      postCount: userData.postCount || 0,
-      joinedAt: userData.createdAt,
-      privacy: userData.privacy || {
-        collection: true,
-        wishlist: false,
-        forSale: true,
+      itemCount: itemCount || 0,
+      postCount: postCount || 0,
+      joinedAt: userData.created_at,
+      privacy: {
+        collection: privacy.show_collection !== false,
+        wishlist: privacy.show_wishlist !== false,
+        forSale: privacy.show_for_sale !== false,
       },
       items: [],
     }
 
     // Load user's posts
     clearPosts()
-    await fetchPosts({ userId: profileId.value })
+    await fetchPosts({ userId: userData.id })
   } catch (e: any) {
     error.value = e.message || 'Profile not found'
   } finally {
