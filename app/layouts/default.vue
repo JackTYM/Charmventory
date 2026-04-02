@@ -4,6 +4,8 @@ import { useAuth } from '~/composables/useAuth'
 const route = useRoute()
 const { user, isAuthenticated, logout, checkSession } = useAuth()
 
+const showMobileMenu = ref(false)
+
 const navItems = [
   { path: '/home', label: 'Home', icon: '🏠' },
   { path: '/catalog', label: 'Catalog', icon: '💎' },
@@ -72,8 +74,28 @@ const updateTheme = () => {
 }
 
 const handleLogout = async () => {
+  showMobileMenu.value = false
   await logout()
 }
+
+onUnmounted(() => {
+  document.removeEventListener('click', closeMobileMenu)
+})
+
+const closeMobileMenu = (e: MouseEvent) => {
+  const target = e.target as HTMLElement
+  if (!target.closest('[data-mobile-menu]')) {
+    showMobileMenu.value = false
+  }
+}
+
+watch(showMobileMenu, (val) => {
+  if (val) {
+    document.addEventListener('click', closeMobileMenu)
+  } else {
+    document.removeEventListener('click', closeMobileMenu)
+  }
+})
 </script>
 
 <template>
@@ -196,9 +218,43 @@ const handleLogout = async () => {
           </button>
           <ClientOnly>
             <template v-if="isAuthenticated">
-              <NuxtLink :to="`/profile/${userSlug}`" class="w-8 h-8 rounded-full bg-rose-pale dark:bg-rose-glow flex items-center justify-center text-rose-primary font-medium text-sm">
-                {{ user?.name?.charAt(0) || user?.email?.charAt(0) || '?' }}
-              </NuxtLink>
+              <div class="relative" data-mobile-menu>
+                <button
+                  @click.stop="showMobileMenu = !showMobileMenu"
+                  class="w-8 h-8 rounded-full bg-rose-pale dark:bg-rose-glow flex items-center justify-center text-rose-primary font-medium text-sm"
+                >
+                  {{ user?.name?.charAt(0) || user?.email?.charAt(0) || '?' }}
+                </button>
+                <div
+                  v-if="showMobileMenu"
+                  class="absolute right-0 top-10 w-48 bg-light-card dark:bg-dark-card border border-light-border dark:border-dark-border rounded-lg shadow-lg py-1 z-50"
+                >
+                  <NuxtLink
+                    :to="`/profile/${userSlug}`"
+                    @click="showMobileMenu = false"
+                    class="flex items-center gap-2 px-4 py-2 text-sm text-ink dark:text-pearl hover:bg-light-bg-alt dark:hover:bg-dark-elevated"
+                  >
+                    <span>👤</span>
+                    <span>Profile</span>
+                  </NuxtLink>
+                  <NuxtLink
+                    to="/settings/profile"
+                    @click="showMobileMenu = false"
+                    class="flex items-center gap-2 px-4 py-2 text-sm text-ink dark:text-pearl hover:bg-light-bg-alt dark:hover:bg-dark-elevated"
+                  >
+                    <span>⚙️</span>
+                    <span>Settings</span>
+                  </NuxtLink>
+                  <div class="border-t border-light-border dark:border-dark-border my-1"></div>
+                  <button
+                    @click="handleLogout"
+                    class="w-full flex items-center gap-2 px-4 py-2 text-sm text-ink dark:text-pearl hover:bg-light-bg-alt dark:hover:bg-dark-elevated text-left"
+                  >
+                    <span>🚪</span>
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </div>
             </template>
             <template v-else>
               <NuxtLink
