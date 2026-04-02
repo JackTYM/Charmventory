@@ -1,6 +1,31 @@
 import { db } from '../../db'
 import { users } from '../../db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
+
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+async function getUniqueSlug(baseSlug: string): Promise<string> {
+  let slug = baseSlug
+  let suffix = 0
+  
+  while (true) {
+    const [existing] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.slug, slug))
+      .limit(1)
+    
+    if (!existing) return slug
+    
+    suffix++
+    slug = `${baseSlug}-${suffix}`
+  }
+}
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -32,6 +57,7 @@ export default defineEventHandler(async (event) => {
   })
 
   const jwt = neonAuthResponse.headers.get('set-auth-jwt')
+  const neonSessionCookie = neonAuthResponse.headers.get('set-cookie')
 
   const authResult = await neonAuthResponse.json()
 
@@ -53,15 +79,28 @@ export default defineEventHandler(async (event) => {
     .limit(1)
 
   if (!existingUser) {
+    const userName = authResult.user.name || name
+    const slug = await getUniqueSlug(generateSlug(userName))
+    
     await db.insert(users).values({
       id: authResult.user.id,
       email: authResult.user.email,
-      name: authResult.user.name || name,
+      name: userName,
+      slug,
     })
   }
 
-  if (authResult.session?.token) {
-    setCookie(event, 'session_token', authResult.session.token, COOKIE_OPTIONS)
+  let sessionToken = authResult.session?.token
+  
+  if (!sessionToken && neonSessionCookie) {
+    const match = neonSessionCookie.match(/neon_auth\.session_token=([^;]+)/)
+    if (match) {
+      sessionToken = match[1]
+    }
+  }
+
+  if (sessionToken) {
+    setCookie(event, 'session_token', sessionToken, COOKIE_OPTIONS)
   }
 
   if (jwt) {
