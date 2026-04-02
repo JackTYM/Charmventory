@@ -127,9 +127,10 @@ const showAddModal = ref(false)
         <div class="relative">
           <input
             v-model="searchQuery"
-            type="text"
+            type="search"
             placeholder="Search by name, collection, item number..."
             class="form-input pl-10"
+            @keyup.enter="($event.target as HTMLInputElement).blur()"
           />
           <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted dark:text-ash">
             🔍

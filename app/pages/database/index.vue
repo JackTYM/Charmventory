@@ -209,9 +209,10 @@ function formatPrice(price: number | null | undefined, currency = 'USD') {
       <div class="relative">
         <input
           v-model="search"
-          type="text"
+          type="search"
           placeholder="Search by Style ID, name, or collection..."
           class="form-input w-full pl-10"
+          @keyup.enter="($event.target as HTMLInputElement).blur()"
         />
         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted dark:text-ash">
           🔍

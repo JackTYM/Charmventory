@@ -119,22 +119,13 @@ export function useAuth() {
   }
 
   async function signOut() {
-    try {
-      await fetch('/api/auth/sign-out', {
-        method: 'POST',
-        credentials: 'include'
-      })
-    } catch {
-    }
-
     user.value = null
     clearStorage()
 
-    try {
-      const { resetDataApiClient } = await import('./useDataApi')
-      resetDataApiClient()
-    } catch {
-    }
+    fetch('/api/auth/sign-out', {
+      method: 'POST',
+      credentials: 'include'
+    }).catch(() => {})
 
     window.location.href = '/auth/login'
   }
