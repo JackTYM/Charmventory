@@ -46,7 +46,7 @@ function transformSeller(row: DbSeller, reviews: DbSellerReview[] = []): Seller 
       isVouch: r.is_vouch,
       message: r.message || undefined,
     })),
-    createdBy: (row as any).created_by || undefined,
+    createdBy: row.created_by || undefined,
     createdAt: row.created_at,
   }
 }

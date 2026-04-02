@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useAuth } from '~/composables/useAuth'
 import { useItems } from '~/composables/useItems'
+import { useUpload } from '~/composables/useUpload'
 import { useDataApi } from '~/composables/useDataApi'
 
 const route = useRoute()
 const { isAuthenticated, checkSession } = useAuth()
-const { updateItem, deleteItem } = useItems()
+const { updateItem, deleteItem, addImage, deleteImage } = useItems()
+const { uploadImage } = useUpload()
 const { from } = useDataApi()
 
 const itemTypes = [
@@ -137,6 +139,13 @@ const showDeleteConfirm = ref(false)
 const error = ref('')
 const itemId = route.params.id as string
 
+// Existing images from database
+const existingImages = ref<Array<{ id: string; url: string; category: string }>>([])
+// New images to upload
+const newImageFiles = ref<File[]>([])
+const newImagePreviews = ref<string[]>([])
+const uploadingImages = ref(false)
+
 onMounted(async () => {
   await checkSession()
   if (!isAuthenticated.value) {
@@ -151,13 +160,21 @@ async function fetchItem() {
   error.value = ''
   try {
     const { data, error: queryError } = await from('items')
-      .select('*')
+      .select('*, item_images(*)')
       .eq('id', itemId)
       .single()
 
     if (queryError) throw new Error(queryError.message)
 
     const row = data as any
+    
+    // Load existing images
+    existingImages.value = (row.item_images || []).map((img: any) => ({
+      id: img.id,
+      url: img.url,
+      category: img.category || 'item',
+    }))
+    
     const response = {
       type: row.type,
       name: row.name,
@@ -294,6 +311,33 @@ async function fetchItem() {
   }
 }
 
+// Image handling
+function handleImageSelect(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (target.files) {
+    const files = Array.from(target.files)
+    newImageFiles.value.push(...files)
+    files.forEach(file => {
+      newImagePreviews.value.push(URL.createObjectURL(file))
+    })
+  }
+}
+
+function removeNewImage(index: number) {
+  URL.revokeObjectURL(newImagePreviews.value[index])
+  newImageFiles.value.splice(index, 1)
+  newImagePreviews.value.splice(index, 1)
+}
+
+async function removeExistingImage(imageId: string) {
+  try {
+    await deleteImage(imageId, itemId)
+    existingImages.value = existingImages.value.filter(img => img.id !== imageId)
+  } catch (e: any) {
+    error.value = e.message || 'Failed to delete image'
+  }
+}
+
 async function handleSubmit() {
   if (!form.name) {
     error.value = 'Item name is required'
@@ -329,11 +373,22 @@ async function handleSubmit() {
       color,
     })
 
+    // Upload new images
+    if (newImageFiles.value.length > 0) {
+      uploadingImages.value = true
+      for (const file of newImageFiles.value) {
+        const url = await uploadImage(file, 'items')
+        await addImage(itemId, url, 'item')
+      }
+      uploadingImages.value = false
+    }
+
     await navigateTo(`/item/${itemId}`)
   } catch (e: any) {
     error.value = e.message || 'Failed to update item'
   } finally {
     saving.value = false
+    uploadingImages.value = false
   }
 }
 

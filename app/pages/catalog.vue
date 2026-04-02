@@ -18,11 +18,21 @@ onMounted(async () => {
 const filters = [
   { id: 'all', label: 'All' },
   { id: 'charm', label: 'Charms' },
-  { id: 'murano', label: 'Murano' },
   { id: 'clip', label: 'Clips' },
+  { id: 'murano', label: 'Murano' },
+  { id: 'safety_chain', label: 'Safety Chains' },
+  { id: 'earring', label: 'Earrings' },
+  { id: 'necklace', label: 'Necklaces' },
   { id: 'bracelet', label: 'Bracelets' },
+  { id: 'bangle', label: 'Bangles' },
   { id: 'ring', label: 'Rings' },
-  { id: 'limited', label: 'Limited Edition' },
+  { id: 'brooch', label: 'Brooches' },
+  { id: 'pendant', label: 'Pendants' },
+  { id: 'ornament', label: 'Ornaments' },
+  { id: 'keychain', label: 'Key Chains' },
+  { id: 'box', label: 'Boxes' },
+  { id: 'catalogue', label: 'Catalogues' },
+  { id: 'other', label: 'Other' },
 ]
 
 const activeFilter = ref('all')
@@ -35,11 +45,7 @@ const filteredItems = computed(() => {
 
   // Filter by type
   if (activeFilter.value !== 'all') {
-    if (activeFilter.value === 'limited') {
-      result = result.filter(item => item.isLimited)
-    } else {
-      result = result.filter(item => item.type === activeFilter.value)
-    }
+    result = result.filter(item => item.type === activeFilter.value)
   }
 
   // Filter by search
@@ -99,7 +105,7 @@ function getItemImage(item: any) {
     catalogue: '📖',
     gift_with_purchase: '🎁',
   }
-  return { type: 'emoji', value: typeEmojis[item.type] || '✨' }
+  return { type: 'emoji', value: typeEmojis[item.type] || '💎' }
 }
 
 // Show add item modal
@@ -173,7 +179,16 @@ const showAddModal = ref(false)
 
       <!-- Empty State -->
       <section v-if="filteredItems.length === 0" class="text-center py-16">
-        <div class="text-6xl mb-4">✨</div>
+        <div class="mb-4 flex justify-center">
+          <svg class="w-16 h-16" viewBox="0 0 64 64" fill="none">
+            <path d="M32 8L35 24L32 40L29 24L32 8Z" fill="#D4AF37"/>
+            <path d="M16 24L32 27L48 24L32 21L16 24Z" fill="#D4AF37"/>
+            <path d="M48 4L49.5 10L48 16L46.5 10L48 4Z" fill="#C9A227" opacity="0.8"/>
+            <path d="M42 10L48 11L54 10L48 9L42 10Z" fill="#C9A227" opacity="0.8"/>
+            <path d="M14 36L15.5 42L14 48L12.5 42L14 36Z" fill="#B8962E" opacity="0.6"/>
+            <path d="M8 42L14 43L20 42L14 41L8 42Z" fill="#B8962E" opacity="0.6"/>
+          </svg>
+        </div>
         <h2 class="font-display text-2xl text-ink dark:text-pearl mb-2">
           {{ searchQuery || activeFilter !== 'all' ? 'No items found' : 'Your catalog is empty' }}
         </h2>

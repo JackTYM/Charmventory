@@ -26,7 +26,7 @@ const priorityLabel = (priority: string) => {
 
 // Get emoji for wishlist item
 function getItemEmoji() {
-  const emojis = ['💎', '✨', '💫', '🌟', '💖', '🌙', '🌹', '🦋', '🔮']
+  const emojis = ['💎', '💖', '🌙', '🌹', '🦋', '🔮', '🎀', '👑', '💍']
   return emojis[Math.floor(Math.random() * emojis.length)]
 }
 

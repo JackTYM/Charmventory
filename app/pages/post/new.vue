@@ -19,7 +19,7 @@ onMounted(async () => {
 })
 
 const postTypes = [
-  { value: 'new_charm', label: 'Recently Acquired', emoji: '✨' },
+  { value: 'new_charm', label: 'Recently Acquired', emoji: '🆕' },
   { value: 'bracelet_build', label: 'Bracelet Build', emoji: '💎' },
   { value: 'haul', label: 'Haul', emoji: '🛍️' },
   { value: 'collection', label: 'Collection', emoji: '📦' },

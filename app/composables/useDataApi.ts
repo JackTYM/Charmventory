@@ -171,6 +171,7 @@ export interface DbSeller {
   source_type?: string
   platform?: string
   url?: string
+  created_by?: string
   created_at: string
 }
 
