@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
 
   if (sessionToken) {
     try {
-      await fetch(`${config.neonAuthUrl}/sign-out`, {
+      const response = await fetch(`${config.neonAuthUrl}/sign-out`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -15,6 +15,11 @@ export default defineEventHandler(async (event) => {
         },
         body: '{}'
       })
+      
+      const neonCookie = response.headers.get('set-cookie')
+      if (neonCookie) {
+        appendResponseHeader(event, 'Set-Cookie', neonCookie)
+      }
     } catch {
     }
   }
