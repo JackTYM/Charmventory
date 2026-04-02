@@ -44,25 +44,43 @@ interface PendingRevision {
   }
 }
 
+interface CharmContribution {
+  id: string
+  styleId: string
+  contributionType: string
+  field: string | null
+  oldValue: string | null
+  newValue: string | null
+  imageUrl: string | null
+  notes: string | null
+  contributedBy: string
+  status: string
+  createdAt: string
+  contributorName: string | null
+  contributorEmail: string | null
+}
+
 const pendingRevisions = ref<PendingRevision[]>([])
+const charmContributions = ref<CharmContribution[]>([])
 const loading = ref(true)
 const error = ref('')
 
-// Selected revision for preview
 const selectedRevision = ref<PendingRevision | null>(null)
+const selectedContribution = ref<CharmContribution | null>(null)
 const reviewNote = ref('')
 const processing = ref(false)
 
-// Scrapers
 const scrapers = ref<ScraperInfo[]>([])
-const activeTab = ref<'revisions' | 'scrapers'>('revisions')
+const activeTab = ref<'revisions' | 'contributions'>('contributions')
 const runningScraperName = ref<string | null>(null)
 
 onMounted(async () => {
   await checkSession()
   if (isAdmin.value) {
-    await loadPendingRevisions()
-    // loadScrapers() - disabled until API is implemented
+    await Promise.all([
+      loadPendingRevisions(),
+      loadCharmContributions(),
+    ])
   }
   loading.value = false
 })
@@ -71,7 +89,15 @@ async function loadPendingRevisions() {
   try {
     pendingRevisions.value = await $fetch('/api/catalogs/revisions/pending')
   } catch (e: any) {
-    error.value = e.message || 'Failed to load pending revisions'
+    console.error('Failed to load pending revisions:', e)
+  }
+}
+
+async function loadCharmContributions() {
+  try {
+    charmContributions.value = await $fetch('/api/admin/charm-contributions')
+  } catch (e: any) {
+    console.error('Failed to load charm contributions:', e)
   }
 }
 
@@ -151,7 +177,47 @@ function selectRevision(revision: PendingRevision) {
 
 function closeModal() {
   selectedRevision.value = null
+  selectedContribution.value = null
   reviewNote.value = ''
+}
+
+function selectContribution(contribution: CharmContribution) {
+  selectedContribution.value = contribution
+  reviewNote.value = ''
+}
+
+async function reviewContribution(action: 'approve' | 'reject') {
+  if (!selectedContribution.value) return
+
+  processing.value = true
+  try {
+    await $fetch(`/api/admin/charm-contributions/${selectedContribution.value.id}/review`, {
+      method: 'POST',
+      body: {
+        action,
+        reviewNotes: reviewNote.value || null,
+      },
+    })
+
+    charmContributions.value = charmContributions.value.filter(
+      (c) => c.id !== selectedContribution.value?.id
+    )
+    selectedContribution.value = null
+    reviewNote.value = ''
+  } catch (e: any) {
+    error.value = e.message || 'Failed to review contribution'
+  } finally {
+    processing.value = false
+  }
+}
+
+function parseCharmData(newValue: string | null) {
+  if (!newValue) return {}
+  try {
+    return JSON.parse(newValue)
+  } catch {
+    return {}
+  }
 }
 
 function formatDate(dateStr: string) {
@@ -201,36 +267,94 @@ function formatDate(dateStr: string) {
 
       <!-- Stats -->
       <section class="mb-8 bg-light-card dark:bg-dark-card rounded-lg p-6 shadow-card">
-        <div class="flex items-center gap-6">
+        <div class="flex items-center gap-6 flex-wrap">
+          <div class="flex items-center gap-4">
+            <div class="text-4xl">💎</div>
+            <div>
+              <p class="text-2xl font-display text-ink dark:text-pearl">{{ charmContributions.length }}</p>
+              <p class="text-sm text-muted dark:text-ash">Charm Contributions</p>
+            </div>
+          </div>
           <div class="flex items-center gap-4">
             <div class="text-4xl">📋</div>
             <div>
               <p class="text-2xl font-display text-ink dark:text-pearl">{{ pendingRevisions.length }}</p>
-              <p class="text-sm text-muted dark:text-ash">Pending Reviews</p>
+              <p class="text-sm text-muted dark:text-ash">Catalog Revisions</p>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Tabs - Scrapers tab hidden until API is implemented -->
+      <!-- Tabs -->
       <div class="flex gap-2 mb-6">
         <button
-          class="px-4 py-2 rounded-lg font-medium transition-colors bg-rose-primary text-white"
-        >
-          Pending Reviews ({{ pendingRevisions.length }})
-        </button>
-        <!-- TODO: Uncomment when /api/admin/scrapers is implemented
-        <button
-          @click="activeTab = 'scrapers'"
+          @click="activeTab = 'contributions'"
           class="px-4 py-2 rounded-lg font-medium transition-colors"
-          :class="activeTab === 'scrapers'
+          :class="activeTab === 'contributions'
             ? 'bg-rose-primary text-white'
             : 'bg-light-card dark:bg-dark-card text-muted dark:text-ash hover:text-ink dark:hover:text-pearl'"
         >
-          Scrapers
+          Charm Contributions ({{ charmContributions.length }})
         </button>
-        -->
+        <button
+          @click="activeTab = 'revisions'"
+          class="px-4 py-2 rounded-lg font-medium transition-colors"
+          :class="activeTab === 'revisions'
+            ? 'bg-rose-primary text-white'
+            : 'bg-light-card dark:bg-dark-card text-muted dark:text-ash hover:text-ink dark:hover:text-pearl'"
+        >
+          Catalog Revisions ({{ pendingRevisions.length }})
+        </button>
       </div>
+
+      <!-- Charm Contributions Section -->
+      <section v-if="activeTab === 'contributions'" class="bg-light-card dark:bg-dark-card rounded-lg shadow-card overflow-hidden mb-8">
+        <h3 class="p-4 font-display text-lg text-ink dark:text-pearl border-b border-light-border dark:border-dark-border">
+          Pending Charm Contributions
+        </h3>
+
+        <div v-if="charmContributions.length === 0" class="p-8 text-center text-muted dark:text-ash">
+          <div class="text-4xl mb-4">✅</div>
+          <p>No pending charm contributions!</p>
+        </div>
+
+        <div v-else class="divide-y divide-light-border dark:divide-dark-border">
+          <div
+            v-for="contribution in charmContributions"
+            :key="contribution.id"
+            class="p-4 hover:bg-light-bg dark:hover:bg-dark-elevated transition-colors cursor-pointer"
+            @click="selectContribution(contribution)"
+          >
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-mono text-rose-primary text-sm">{{ contribution.styleId }}</span>
+                  <span class="px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                    {{ contribution.contributionType === 'new_charm' ? 'New' : 'Edit' }}
+                  </span>
+                </div>
+                <h4 class="font-medium text-ink dark:text-pearl">
+                  {{ parseCharmData(contribution.newValue).name || 'Unknown Name' }}
+                </h4>
+                <p class="text-sm text-muted dark:text-ash mt-1">
+                  By {{ contribution.contributorName || contribution.contributorEmail || 'Anonymous' }}
+                </p>
+                <p v-if="contribution.notes" class="text-sm text-muted dark:text-ash mt-1 italic">
+                  "{{ contribution.notes }}"
+                </p>
+                <p class="text-xs text-muted dark:text-ash mt-2">
+                  Submitted {{ formatDate(contribution.createdAt) }}
+                </p>
+              </div>
+              <div class="flex gap-2">
+                <span class="px-2 py-1 text-xs rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                  Pending
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <!-- Scrapers Section - hidden until API is implemented -->
       <section v-if="false && activeTab === 'scrapers'" class="bg-light-card dark:bg-dark-card rounded-lg shadow-card overflow-hidden mb-8">
@@ -425,6 +549,128 @@ function formatDate(dateStr: string) {
               </button>
               <button
                 @click="reviewRevision('approve')"
+                class="btn btn-primary"
+                :disabled="processing"
+              >
+                {{ processing ? 'Processing...' : 'Approve' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charm Contribution Review Modal -->
+      <div
+        v-if="selectedContribution"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        @click.self="closeModal"
+      >
+        <div class="absolute inset-0 bg-black/70" @click="closeModal"></div>
+
+        <div class="relative bg-light-card dark:bg-dark-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
+          <div class="flex items-center justify-between p-4 border-b border-light-border dark:border-dark-border">
+            <div>
+              <h2 class="font-display text-xl text-ink dark:text-pearl">
+                Review Charm Contribution
+              </h2>
+              <p class="text-sm text-muted dark:text-ash">
+                {{ selectedContribution.contributionType === 'new_charm' ? 'New charm' : 'Edit existing' }} • {{ selectedContribution.styleId }}
+              </p>
+            </div>
+            <button @click="closeModal" class="text-muted hover:text-ink dark:hover:text-pearl text-2xl">&times;</button>
+          </div>
+
+          <div class="p-4 space-y-4">
+            <div v-if="selectedContribution.imageUrl" class="flex justify-center">
+              <img :src="selectedContribution.imageUrl" class="max-w-xs rounded-lg shadow" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p class="text-muted dark:text-ash">Style ID</p>
+                <p class="font-mono text-ink dark:text-pearl">{{ selectedContribution.styleId }}</p>
+              </div>
+              <div>
+                <p class="text-muted dark:text-ash">Name</p>
+                <p class="text-ink dark:text-pearl">{{ parseCharmData(selectedContribution.newValue).name || '-' }}</p>
+              </div>
+              <div>
+                <p class="text-muted dark:text-ash">Type</p>
+                <p class="text-ink dark:text-pearl capitalize">{{ parseCharmData(selectedContribution.newValue).type || '-' }}</p>
+              </div>
+              <div>
+                <p class="text-muted dark:text-ash">Collection</p>
+                <p class="text-ink dark:text-pearl">{{ parseCharmData(selectedContribution.newValue).collection || '-' }}</p>
+              </div>
+              <div>
+                <p class="text-muted dark:text-ash">Price</p>
+                <p class="text-ink dark:text-pearl">
+                  {{ parseCharmData(selectedContribution.newValue).originalPrice 
+                    ? `${parseCharmData(selectedContribution.newValue).originalPrice} ${parseCharmData(selectedContribution.newValue).currency || 'USD'}` 
+                    : '-' }}
+                </p>
+              </div>
+              <div>
+                <p class="text-muted dark:text-ash">Region</p>
+                <p class="text-ink dark:text-pearl">{{ parseCharmData(selectedContribution.newValue).region || '-' }}</p>
+              </div>
+            </div>
+
+            <div v-if="parseCharmData(selectedContribution.newValue).description">
+              <p class="text-muted dark:text-ash text-sm">Description</p>
+              <p class="text-ink dark:text-pearl text-sm">{{ parseCharmData(selectedContribution.newValue).description }}</p>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              <span v-if="parseCharmData(selectedContribution.newValue).isLimited" class="px-2 py-1 text-xs rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                Limited Edition
+              </span>
+              <span v-if="parseCharmData(selectedContribution.newValue).isCountryExclusive" class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                Country Exclusive: {{ parseCharmData(selectedContribution.newValue).exclusiveCountry }}
+              </span>
+            </div>
+
+            <div v-if="selectedContribution.notes" class="p-3 bg-light-bg dark:bg-dark-elevated rounded-lg">
+              <p class="text-muted dark:text-ash text-xs mb-1">Contributor Notes</p>
+              <p class="text-sm text-ink dark:text-pearl">{{ selectedContribution.notes }}</p>
+            </div>
+
+            <div class="text-xs text-muted dark:text-ash">
+              Submitted by {{ selectedContribution.contributorName || selectedContribution.contributorEmail || 'Anonymous' }}
+              on {{ formatDate(selectedContribution.createdAt) }}
+            </div>
+          </div>
+
+          <div class="p-4 border-t border-light-border dark:border-dark-border">
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-ink dark:text-pearl mb-1">
+                Review Note (optional)
+              </label>
+              <input
+                v-model="reviewNote"
+                type="text"
+                placeholder="Reason for rejection or notes..."
+                class="form-input"
+              />
+            </div>
+
+            <div class="flex gap-3 justify-end">
+              <button
+                @click="closeModal"
+                class="btn btn-secondary"
+                :disabled="processing"
+              >
+                Cancel
+              </button>
+              <button
+                @click="reviewContribution('reject')"
+                class="btn bg-red-500 hover:bg-red-600 text-white"
+                :disabled="processing"
+              >
+                {{ processing ? 'Processing...' : 'Reject' }}
+              </button>
+              <button
+                @click="reviewContribution('approve')"
                 class="btn btn-primary"
                 :disabled="processing"
               >

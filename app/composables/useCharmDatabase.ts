@@ -102,6 +102,8 @@ export function useCharmDatabase() {
     isRetired?: boolean
     offset?: number
     limit?: number
+    sortBy?: 'created_at' | 'name' | 'original_price'
+    sortOrder?: 'asc' | 'desc'
   } = {}) {
     loading.value = true
     error.value = null
@@ -160,10 +162,14 @@ export function useCharmDatabase() {
       }
 
       // Default: use charm_browse view (excludes archive.org, pre-joined)
+      const sortBy = options.sortBy || 'created_at'
+      const sortOrder = options.sortOrder || 'desc'
+      
       let query = db
         .from('charm_browse')
         .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false })
+        .not('primary_image', 'is', null)
+        .order(sortBy, { ascending: sortOrder === 'asc' })
         .range(offset, offset + limit - 1)
 
       // Apply filters

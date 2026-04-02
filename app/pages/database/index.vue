@@ -13,10 +13,24 @@ const search = ref('')
 const selectedCollection = ref('')
 const selectedType = ref('')
 const selectedSource = ref('')
-const showFilters = ref(false)
+const selectedSort = ref('newest')
 const currentOffset = ref(0)
 const pageSize = 50
 const loadingMore = ref(false)
+
+const sortOptions = [
+  { value: 'newest', label: 'First Seen: Recent', sortBy: 'created_at', sortOrder: 'desc' },
+  { value: 'oldest', label: 'First Seen: Old', sortBy: 'created_at', sortOrder: 'asc' },
+  { value: 'name_asc', label: 'Name: A-Z', sortBy: 'name', sortOrder: 'asc' },
+  { value: 'name_desc', label: 'Name: Z-A', sortBy: 'name', sortOrder: 'desc' },
+  { value: 'price_high', label: 'Price: High-Low', sortBy: 'original_price', sortOrder: 'desc' },
+  { value: 'price_low', label: 'Price: Low-High', sortBy: 'original_price', sortOrder: 'asc' },
+] as const
+
+// Get current sort config
+const currentSortConfig = computed(() => {
+  return sortOptions.find(opt => opt.value === selectedSort.value) || sortOptions[0]
+})
 
 // Available sources
 const sources = ref<Array<{ id: string; name: string; count: number }>>([])
@@ -79,19 +93,31 @@ const collections = [
 ]
 
 const types = [
-  { value: 'charm', label: 'Charm' },
-  { value: 'clip', label: 'Clip' },
-  { value: 'murano', label: 'Murano' },
-  { value: 'safety_chain', label: 'Safety Chain' },
-  { value: 'bracelet', label: 'Bracelet' },
-  { value: 'necklace', label: 'Necklace' },
-  { value: 'ring', label: 'Ring' },
-  { value: 'earring', label: 'Earring' },
+  { value: 'charm', label: 'Charms' },
+  { value: 'clip', label: 'Clips' },
+  { value: 'murano', label: 'Muranos' },
+  { value: 'bracelet', label: 'Bracelets' },
+  { value: 'bangle', label: 'Bangles' },
+  { value: 'safety_chain', label: 'Safety Chains' },
+  { value: 'ring', label: 'Rings' },
+  { value: 'earring', label: 'Earrings' },
+  { value: 'necklace', label: 'Necklaces' },
+  { value: 'pendant', label: 'Pendants' },
+  { value: 'brooch', label: 'Brooches' },
+  { value: 'keychain', label: 'Key Chains' },
+  { value: 'ornament', label: 'Ornaments' },
+  { value: 'box', label: 'Boxes' },
+  { value: 'catalogue', label: 'Catalogs' },
+  { value: 'other', label: 'Other' },
 ]
 
 onMounted(async () => {
   await Promise.all([
-    searchCharms({ limit: pageSize }),
+    searchCharms({ 
+      limit: pageSize,
+      sortBy: currentSortConfig.value.sortBy as any,
+      sortOrder: currentSortConfig.value.sortOrder as any,
+    }),
     fetchSources(),
   ])
 })
@@ -103,6 +129,8 @@ async function handleSearch() {
     collection: selectedCollection.value || undefined,
     type: selectedType.value || undefined,
     source: selectedSource.value || undefined,
+    sortBy: currentSortConfig.value.sortBy as any,
+    sortOrder: currentSortConfig.value.sortOrder as any,
     limit: pageSize,
     offset: 0,
   })
@@ -118,6 +146,8 @@ async function loadMore() {
       collection: selectedCollection.value || undefined,
       type: selectedType.value || undefined,
       source: selectedSource.value || undefined,
+      sortBy: currentSortConfig.value.sortBy as any,
+      sortOrder: currentSortConfig.value.sortOrder as any,
       limit: pageSize,
       offset: currentOffset.value,
     })
@@ -153,7 +183,7 @@ watch(charms, (newCharms) => {
 // Show all charms regardless of image status
 const displayedCharms = computed(() => charms.value)
 
-watch([search, selectedCollection, selectedType, selectedSource], () => {
+watch([search, selectedCollection, selectedType, selectedSource, selectedSort], () => {
   handleSearch()
 }, { debounce: 300 } as any)
 
@@ -163,6 +193,12 @@ function formatPrice(price: number | null | undefined, currency = 'USD') {
     style: 'currency',
     currency,
   }).format(price)
+}
+
+function formatDate(dateString: string | null | undefined) {
+  if (!dateString) return null
+  const date = new Date(dateString)
+  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
 </script>
 
@@ -219,15 +255,7 @@ function formatPrice(price: number | null | undefined, currency = 'USD') {
         </span>
       </div>
 
-      <div class="flex gap-2 flex-wrap">
-        <button
-          @click="showFilters = !showFilters"
-          class="tag"
-          :class="showFilters ? 'tag-active' : 'tag-default'"
-        >
-          Filters {{ showFilters ? '▲' : '▼' }}
-        </button>
-
+      <div class="flex gap-2 flex-wrap items-center">
         <select
           v-model="selectedCollection"
           class="form-input py-2 px-3 text-sm"
@@ -253,11 +281,20 @@ function formatPrice(price: number | null | undefined, currency = 'USD') {
             {{ s.name }} ({{ s.count.toLocaleString() }})
           </option>
         </select>
+
+        <select
+          v-model="selectedSort"
+          class="form-input py-2 px-3 text-sm"
+        >
+          <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
       </div>
     </section>
 
     <!-- Stats -->
-    <section class="mb-6 text-center text-sm text-muted dark:text-ash">
+    <section class="mb-6 flex items-center justify-between text-sm text-muted dark:text-ash">
       <span v-if="charmsTotal > 0">
         Showing {{ displayedCharms.length.toLocaleString() }} of {{ charmsTotal.toLocaleString() }} products
       </span>
@@ -319,12 +356,15 @@ function formatPrice(price: number | null | undefined, currency = 'USD') {
               <span class="text-xs font-medium text-ink dark:text-pearl">
                 {{ formatPrice(charm.originalPrice, charm.currency) }}
               </span>
-              <div class="flex gap-1">
+              <div class="flex gap-1 items-center">
                 <span v-if="charm.isLimited" class="text-xs" title="Limited Edition">⭐</span>
                 <span v-if="charm.isRetired" class="text-xs" title="Retired">🏷️</span>
                 <span v-if="charm.verified" class="text-xs text-green-500" title="Verified">✓</span>
               </div>
             </div>
+            <p v-if="charm.createdAt" class="text-[10px] text-muted dark:text-ash mt-1">
+              First seen: {{ formatDate(charm.createdAt) }}
+            </p>
           </div>
         </NuxtLink>
       </div>
