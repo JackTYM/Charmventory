@@ -21,7 +21,7 @@ const filters = [
   { id: 'clip', label: 'Clip' },
   { id: 'murano', label: 'Murano' },
   { id: 'safety_chain', label: 'Safety Chain' },
-  { id: 'earring', label: 'Earring' },
+  { id: 'earring', label: 'Earrings' },
   { id: 'necklace', label: 'Necklace' },
   { id: 'bracelet', label: 'Bracelet' },
   { id: 'bangle', label: 'Bangle' },
