@@ -61,13 +61,11 @@ export default defineEventHandler(async (event) => {
 
   const authResult = await neonAuthResponse.json()
 
-  console.log('Neon Auth response:', { 
+  console.log('Neon Auth full response:', JSON.stringify({
     status: neonAuthResponse.status,
-    jwt: !!jwt,
-    cookie: neonSessionCookie,
-    hasSession: !!authResult.session,
-    sessionToken: authResult.session?.token ? 'present' : 'missing'
-  })
+    headers: Object.fromEntries(neonAuthResponse.headers.entries()),
+    body: authResult
+  }, null, 2))
 
   if (!neonAuthResponse.ok) {
     throw createError({
