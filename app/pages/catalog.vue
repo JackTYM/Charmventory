@@ -145,8 +145,8 @@ const showAddModal = ref(false)
       </section>
 
       <!-- Filters -->
-      <section class="mb-4 overflow-x-auto pb-2 -mx-4 px-4">
-        <div class="flex gap-2 min-w-max">
+      <section class="mb-4">
+        <div class="flex flex-wrap gap-2">
           <button
             v-for="filter in filters"
             :key="filter.id"
