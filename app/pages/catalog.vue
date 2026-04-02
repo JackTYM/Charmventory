@@ -149,7 +149,7 @@ const showAddModal = ref(false)
       <section class="mb-4">
         <div 
           class="flex flex-wrap gap-2 overflow-hidden transition-all duration-200"
-          :class="filtersExpanded ? 'max-h-none' : 'max-h-10'"
+          :class="filtersExpanded ? 'max-h-none' : 'max-h-8'"
         >
           <button
             v-for="filter in filters"
