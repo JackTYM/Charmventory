@@ -1,5 +1,3 @@
-import { useAuth } from './useAuth'
-
 const MAX_IMAGE_DIMENSION = 2048
 const JPEG_QUALITY = 0.85
 
@@ -75,8 +73,6 @@ async function compressImage(file: File): Promise<Blob> {
 }
 
 export function useUpload() {
-  const { getAuthHeaders } = useAuth()
-
   async function uploadFile(file: File, folder: string = 'items'): Promise<string> {
     // Compress image before upload
     const processedFile = await compressImage(file)
@@ -88,7 +84,7 @@ export function useUpload() {
     // Get presigned URL
     const { uploadUrl, publicUrl } = await $fetch('/api/upload/presigned', {
       method: 'POST',
-      headers: getAuthHeaders(),
+      credentials: 'include',
       body: {
         filename,
         contentType,
