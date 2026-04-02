@@ -103,7 +103,10 @@ export default defineEventHandler(async (event) => {
 
   if (jwt) {
     setCookie(event, 'auth_jwt', jwt, {
-      ...COOKIE_OPTIONS,
+      httpOnly: false,
+      secure: true,
+      sameSite: 'lax' as const,
+      path: '/',
       maxAge: 60 * 15,
     })
   }

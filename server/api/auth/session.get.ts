@@ -24,11 +24,11 @@ export default defineEventHandler(async (event) => {
     const jwt = response.headers.get('set-auth-jwt')
     if (jwt) {
       setCookie(event, 'auth_jwt', jwt, {
-        httpOnly: true,
+        httpOnly: false,
         secure: true,
         sameSite: 'lax',
         path: '/',
-        maxAge: 60 * 15, // JWT expires in 15 min
+        maxAge: 60 * 15,
       })
     }
 

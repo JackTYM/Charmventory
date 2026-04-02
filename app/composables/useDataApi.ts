@@ -1,17 +1,15 @@
 import { NeonPostgrestClient } from '@neondatabase/postgrest-js'
 
-// JWT key from useAuth (the actual JWT for Data API, not the session token)
-const JWT_KEY = 'charmventory_jwt'
-
-function getStoredJwt(): string | null {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem(JWT_KEY)
+function getJwtFromCookie(): string | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie.match(/(?:^|; )auth_jwt=([^;]+)/)
+  return match?.[1] ?? null
 }
 
 // Create authenticated fetch wrapper
 function createAuthenticatedFetch(): typeof fetch {
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const jwt = getStoredJwt()
+    const jwt = getJwtFromCookie()
     console.log('[DataAPI] Making request, JWT present:', !!jwt, 'JWT length:', jwt?.length)
 
     if (!jwt) {
