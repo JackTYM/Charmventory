@@ -46,8 +46,8 @@ const loading = ref(false)
 const error = ref('')
 
 async function handleSubmit() {
-  if (!form.name || !form.platform || !form.sourceType) {
-    error.value = 'Source type, name, and platform are required'
+  if (!form.name || !form.platform || !form.sourceType || !form.listType) {
+    error.value = 'Source type, name, platform, and list selection are required'
     return
   }
 
@@ -146,7 +146,7 @@ async function handleSubmit() {
 
         <!-- Your List -->
         <section class="bg-light-card dark:bg-dark-card rounded-lg p-5 shadow-card space-y-4">
-          <h3 class="font-display text-lg text-ink dark:text-pearl">Add to Your List</h3>
+          <h3 class="font-display text-lg text-ink dark:text-pearl">Add to Your List *</h3>
 
           <div class="flex gap-3">
             <button

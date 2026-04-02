@@ -136,12 +136,7 @@ export function useAuth() {
     } catch {
     }
 
-    const host = typeof window !== 'undefined' ? window.location.hostname : ''
-    if (host === 'app.charmventory.com' || host === 'database.charmventory.com') {
-      window.location.href = 'https://app.charmventory.com/auth/login'
-    } else {
-      navigateTo('/auth/login')
-    }
+    window.location.href = '/auth/login'
   }
 
   if (typeof window !== 'undefined' && !user.value) {

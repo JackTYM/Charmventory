@@ -220,7 +220,7 @@ async function handleDelete(sellerId: string) {
             </div>
 
             <div class="flex items-center gap-2">
-              <template v-if="isAuthenticated">
+              <template v-if="isAuthenticated && !isOwnedByUser(seller)">
                 <template v-if="getUserReview(seller)">
                   <span class="text-xs text-muted dark:text-ash">
                     You {{ getUserReview(seller).isVouch ? 'vouched' : 'warned' }}
