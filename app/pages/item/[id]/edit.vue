@@ -14,18 +14,18 @@ const itemTypes = [
   { value: 'charm', label: 'Charm' },
   { value: 'clip', label: 'Clip' },
   { value: 'murano', label: 'Murano Glass' },
-  { value: 'safety_chain', label: 'Safety Chain' },
-  { value: 'earring', label: 'Earring' },
-  { value: 'necklace', label: 'Necklace' },
   { value: 'bracelet', label: 'Bracelet' },
   { value: 'bangle', label: 'Bangle' },
+  { value: 'safety_chain', label: 'Safety Chain' },
   { value: 'ring', label: 'Ring' },
-  { value: 'brooch', label: 'Brooch' },
+  { value: 'earring', label: 'Earring' },
+  { value: 'necklace', label: 'Necklace' },
   { value: 'pendant', label: 'Pendant' },
-  { value: 'ornament', label: 'Ornament' },
+  { value: 'brooch', label: 'Brooch' },
   { value: 'keychain', label: 'Key Chain' },
+  { value: 'ornament', label: 'Ornament' },
   { value: 'box', label: 'Box' },
-  { value: 'catalogue', label: 'Catalogue' },
+  { value: 'catalogue', label: 'Catalog' },
   { value: 'other', label: 'Other' },
 ]
 
@@ -428,6 +428,61 @@ async function handleDelete() {
         <div v-if="error" class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
           {{ error }}
         </div>
+
+        <!-- Photos -->
+        <section class="bg-light-card dark:bg-dark-card rounded-lg p-5 shadow-card">
+          <h3 class="font-display text-lg text-ink dark:text-pearl mb-4">Photos</h3>
+
+          <div class="grid grid-cols-3 gap-3">
+            <!-- Existing images -->
+            <div
+              v-for="image in existingImages"
+              :key="image.id"
+              class="aspect-square rounded-lg overflow-hidden relative group"
+            >
+              <img :src="image.url" class="w-full h-full object-cover" />
+              <button
+                type="button"
+                @click="removeExistingImage(image.id)"
+                class="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                ✕
+              </button>
+            </div>
+
+            <!-- New images to upload -->
+            <div
+              v-for="(url, i) in newImagePreviews"
+              :key="'new-' + i"
+              class="aspect-square rounded-lg overflow-hidden relative"
+            >
+              <img :src="url" class="w-full h-full object-cover" />
+              <button
+                type="button"
+                @click="removeNewImage(i)"
+                class="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            <!-- Add image button -->
+            <label class="aspect-square rounded-lg border-2 border-dashed border-light-border dark:border-dark-border flex items-center justify-center cursor-pointer hover:border-rose-primary transition-colors">
+              <span class="text-2xl text-muted dark:text-ash">+</span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                class="hidden"
+                @change="handleImageSelect"
+              />
+            </label>
+          </div>
+
+          <p v-if="uploadingImages" class="text-xs text-rose-primary mt-3">
+            Uploading images...
+          </p>
+        </section>
 
         <!-- Basic Info -->
         <section class="bg-light-card dark:bg-dark-card rounded-lg p-5 shadow-card space-y-4">
