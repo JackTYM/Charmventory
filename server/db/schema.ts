@@ -173,6 +173,7 @@ export const sellers = pgTable('sellers', {
   sourceType: sourceTypeEnum('source_type'), // Authorized Retailer, Reseller, Personal Shopper
   platform: text('platform'), // Etsy, Mercari, eBay, Instagram, etc.
   url: text('url'),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 

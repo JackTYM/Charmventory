@@ -11,10 +11,11 @@ const {
   reviewSeller,
   addToList,
   removeFromList,
+  deleteSeller,
+  removeReview,
   loading: sellersLoading
 } = useSellers()
 
-// Check auth on mount
 onMounted(async () => {
   await checkSession()
   await fetchSellers()
@@ -25,8 +26,16 @@ onMounted(async () => {
 
 const tabs = ['All', 'Preferred', 'Do Not Buy']
 const activeTab = ref('All')
+const expandedSellers = ref<Set<string>>(new Set())
 
-// Get user's relationship with seller
+function toggleExpanded(sellerId: string) {
+  if (expandedSellers.value.has(sellerId)) {
+    expandedSellers.value.delete(sellerId)
+  } else {
+    expandedSellers.value.add(sellerId)
+  }
+}
+
 function getSellerStatus(sellerId: string) {
   const preferred = userLists.value.preferred.find(l => l.sellerId === sellerId)
   if (preferred) return { status: 'preferred', notes: preferred.notes }
@@ -37,10 +46,14 @@ function getSellerStatus(sellerId: string) {
   return null
 }
 
-// Check if user has reviewed this seller
 function getUserReview(seller: any) {
   if (!user.value) return null
   return seller.reviews?.find((r: any) => r.userId === user.value?.id)
+}
+
+function getOtherReviews(seller: any) {
+  if (!seller.reviews) return []
+  return seller.reviews.filter((r: any) => r.userId !== user.value?.id)
 }
 
 const filteredSellers = computed(() => {
@@ -56,7 +69,6 @@ const filteredSellers = computed(() => {
   return sellers.value
 })
 
-// Actions
 async function handleVouch(sellerId: string) {
   if (!isAuthenticated.value) {
     navigateTo('/auth/login')
@@ -71,6 +83,11 @@ async function handleWarn(sellerId: string) {
     return
   }
   await reviewSeller(sellerId, false)
+}
+
+async function handleRemoveReview(sellerId: string) {
+  if (!confirm('Remove your review?')) return
+  await removeReview(sellerId)
 }
 
 async function handleAddToPreferred(sellerId: string) {
@@ -91,6 +108,15 @@ async function handleAddToDoNotBuy(sellerId: string) {
 
 async function handleRemoveFromList(sellerId: string) {
   await removeFromList(sellerId)
+}
+
+function isOwnedByUser(seller: any) {
+  return user.value?.id && seller.createdBy === user.value.id
+}
+
+async function handleDelete(sellerId: string) {
+  if (!confirm('Are you sure you want to delete this source?')) return
+  await deleteSeller(sellerId)
 }
 </script>
 
@@ -175,33 +201,69 @@ async function handleRemoveFromList(sellerId: string) {
           <!-- Footer -->
           <div class="flex items-center justify-between flex-wrap gap-2">
             <div class="flex items-center gap-4 text-xs">
-              <span class="text-green-600 dark:text-green-400">
-                👍 {{ seller.vouchCount }} vouches
-              </span>
-              <span v-if="seller.warnCount > 0" class="text-red-600 dark:text-red-400">
-                ⚠️ {{ seller.warnCount }} warnings
-              </span>
+              <button 
+                v-if="seller.vouchCount || seller.warnCount"
+                @click="toggleExpanded(seller.id)"
+                class="flex items-center gap-4 hover:opacity-80 transition-opacity"
+              >
+                <span class="text-green-600 dark:text-green-400">
+                  👍 {{ seller.vouchCount || 0 }} vouches
+                </span>
+                <span v-if="seller.warnCount" class="text-red-600 dark:text-red-400">
+                  ⚠️ {{ seller.warnCount }} warnings
+                </span>
+                <span class="text-muted dark:text-ash text-[10px]">
+                  {{ expandedSellers.has(seller.id) ? '▲' : '▼' }}
+                </span>
+              </button>
+              <span v-else class="text-muted dark:text-ash">No reviews yet</span>
             </div>
 
             <div class="flex items-center gap-2">
-              <!-- Vouch/Warn buttons -->
               <template v-if="isAuthenticated">
-                <button
-                  v-if="!getUserReview(seller)"
-                  @click="handleVouch(seller.id)"
-                  class="btn btn-secondary text-xs py-2 px-3"
-                >
-                  👍 Vouch
-                </button>
-                <button
-                  v-if="!getUserReview(seller)"
-                  @click="handleWarn(seller.id)"
-                  class="btn btn-secondary text-xs py-2 px-3"
-                >
-                  ⚠️ Warn
-                </button>
+                <template v-if="getUserReview(seller)">
+                  <span class="text-xs text-muted dark:text-ash">
+                    You {{ getUserReview(seller).isVouch ? 'vouched' : 'warned' }}
+                  </span>
+                  <button
+                    v-if="getUserReview(seller).isVouch"
+                    @click="handleWarn(seller.id)"
+                    class="btn btn-secondary text-xs py-2 px-3"
+                    title="Change to warning"
+                  >
+                    ⚠️ Warn instead
+                  </button>
+                  <button
+                    v-else
+                    @click="handleVouch(seller.id)"
+                    class="btn btn-secondary text-xs py-2 px-3"
+                    title="Change to vouch"
+                  >
+                    👍 Vouch instead
+                  </button>
+                  <button
+                    @click="handleRemoveReview(seller.id)"
+                    class="btn btn-secondary text-xs py-2 px-3 text-muted"
+                    title="Remove review"
+                  >
+                    ✕
+                  </button>
+                </template>
+                <template v-else>
+                  <button
+                    @click="handleVouch(seller.id)"
+                    class="btn btn-secondary text-xs py-2 px-3"
+                  >
+                    👍 Vouch
+                  </button>
+                  <button
+                    @click="handleWarn(seller.id)"
+                    class="btn btn-secondary text-xs py-2 px-3"
+                  >
+                    ⚠️ Warn
+                  </button>
+                </template>
 
-                <!-- List actions -->
                 <template v-if="!getSellerStatus(seller.id)">
                   <button
                     @click="handleAddToPreferred(seller.id)"
@@ -233,6 +295,36 @@ async function handleRemoveFromList(sellerId: string) {
               >
                 Visit Shop
               </a>
+
+              <button
+                v-if="isOwnedByUser(seller)"
+                @click="handleDelete(seller.id)"
+                class="btn btn-secondary text-xs py-2 px-3 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+              >
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+
+          <!-- Reviews Thread (expandable) -->
+          <div 
+            v-if="expandedSellers.has(seller.id) && seller.reviews?.length"
+            class="mt-4 pt-4 border-t border-light-border dark:border-dark-border space-y-3"
+          >
+            <div 
+              v-for="review in seller.reviews" 
+              :key="review.id"
+              class="flex items-start gap-2 text-sm"
+            >
+              <span>{{ review.isVouch ? '👍' : '⚠️' }}</span>
+              <div>
+                <span class="text-muted dark:text-ash text-xs">
+                  {{ review.userId === user?.id ? 'You' : 'User' }}
+                </span>
+                <p v-if="review.message" class="text-ink dark:text-pearl">
+                  {{ review.message }}
+                </p>
+              </div>
             </div>
           </div>
         </div>

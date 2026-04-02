@@ -29,6 +29,13 @@
       "when": 1774977681155,
       "tag": "0003_third_vindicator",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775098455236,
+      "tag": "0004_equal_prodigy",
+      "breakpoints": true
     }
   ]
 }

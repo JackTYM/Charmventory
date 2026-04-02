@@ -18,6 +18,7 @@ interface Seller {
   vouchCount?: number
   warnCount?: number
   reviews?: SellerReview[]
+  createdBy?: string
   createdAt: string
 }
 
@@ -45,6 +46,7 @@ function transformSeller(row: DbSeller, reviews: DbSellerReview[] = []): Seller 
       isVouch: r.is_vouch,
       message: r.message || undefined,
     })),
+    createdBy: (row as any).created_by || undefined,
     createdAt: row.created_at,
   }
 }
@@ -145,12 +147,18 @@ export function useSellers() {
     error.value = null
 
     try {
+      const { user } = useAuth()
+      if (!user.value?.id) {
+        throw new Error('Must be logged in to create seller')
+      }
+
       const { data: result, error: insertError } = await from('sellers')
         .insert({
           name: data.name,
           source_type: data.sourceType,
           platform: data.platform,
           url: data.url,
+          created_by: user.value.id,
         })
         .select()
         .single()
@@ -167,6 +175,27 @@ export function useSellers() {
       throw e
     } finally {
       loading.value = false
+    }
+  }
+
+  async function deleteSeller(sellerId: string) {
+    try {
+      const { user } = useAuth()
+      if (!user.value?.id) {
+        throw new Error('Must be logged in to delete seller')
+      }
+
+      const { error: deleteError } = await from('sellers')
+        .delete()
+        .eq('id', sellerId)
+        .eq('created_by', user.value.id)
+
+      if (deleteError) throw new Error(deleteError.message)
+
+      sellers.value = sellers.value.filter(s => s.id !== sellerId)
+    } catch (e: any) {
+      error.value = e.message || 'Failed to delete seller'
+      throw e
     }
   }
 
@@ -240,52 +269,96 @@ export function useSellers() {
     }
   }
 
-  async function addReview(sellerId: string, isVouch: boolean, message?: string) {
+  async function setReview(sellerId: string, isVouch: boolean, message?: string) {
     try {
       const { user } = useAuth()
       if (!user.value?.id) {
-        throw new Error('Must be logged in to add review')
+        throw new Error('Must be logged in to review')
       }
 
-      const { data: result, error: insertError } = await from('seller_reviews')
-        .insert({
-          user_id: user.value.id,
-          seller_id: sellerId,
-          is_vouch: isVouch,
-          message,
-        })
-        .select()
-        .single()
-
-      if (insertError) throw new Error(insertError.message)
-
-      // Update local seller's review count
       const seller = sellers.value.find(s => s.id === sellerId)
-      if (seller) {
-        if (isVouch) {
-          seller.vouchCount = (seller.vouchCount || 0) + 1
-        } else {
-          seller.warnCount = (seller.warnCount || 0) + 1
+      const existingReview = seller?.reviews?.find(r => r.userId === user.value?.id)
+
+      if (existingReview) {
+        const { error: updateError } = await from('seller_reviews')
+          .update({ is_vouch: isVouch, message: message || null })
+          .eq('id', existingReview.id)
+
+        if (updateError) throw new Error(updateError.message)
+
+        if (seller) {
+          const wasVouch = existingReview.isVouch
+          if (wasVouch !== isVouch) {
+            if (isVouch) {
+              seller.vouchCount = (seller.vouchCount || 0) + 1
+              seller.warnCount = Math.max(0, (seller.warnCount || 0) - 1)
+            } else {
+              seller.warnCount = (seller.warnCount || 0) + 1
+              seller.vouchCount = Math.max(0, (seller.vouchCount || 0) - 1)
+            }
+          }
+          existingReview.isVouch = isVouch
+          existingReview.message = message
+        }
+      } else {
+        const { data: result, error: insertError } = await from('seller_reviews')
+          .insert({
+            user_id: user.value.id,
+            seller_id: sellerId,
+            is_vouch: isVouch,
+            message,
+          })
+          .select()
+          .single()
+
+        if (insertError) throw new Error(insertError.message)
+
+        if (seller) {
+          if (isVouch) {
+            seller.vouchCount = (seller.vouchCount || 0) + 1
+          } else {
+            seller.warnCount = (seller.warnCount || 0) + 1
+          }
+          seller.reviews = seller.reviews || []
+          seller.reviews.push({
+            id: (result as any).id,
+            userId: user.value.id,
+            isVouch,
+            message,
+          })
         }
       }
-
-      return result
     } catch (e: any) {
-      error.value = e.message || 'Failed to add review'
+      error.value = e.message || 'Failed to set review'
       throw e
     }
   }
 
   async function removeReview(sellerId: string) {
     try {
+      const { user } = useAuth()
+      if (!user.value?.id) {
+        throw new Error('Must be logged in to remove review')
+      }
+
+      const seller = sellers.value.find(s => s.id === sellerId)
+      const existingReview = seller?.reviews?.find(r => r.userId === user.value?.id)
+
       const { error: deleteError } = await from('seller_reviews')
         .delete()
         .eq('seller_id', sellerId)
+        .eq('user_id', user.value.id)
 
       if (deleteError) throw new Error(deleteError.message)
 
-      // Refresh seller to get updated counts
-      await fetchSellers()
+      if (seller && existingReview) {
+        if (existingReview.isVouch) {
+          seller.vouchCount = Math.max(0, (seller.vouchCount || 0) - 1)
+        } else {
+          seller.warnCount = Math.max(0, (seller.warnCount || 0) - 1)
+        }
+        seller.reviews = seller.reviews?.filter(r => r.userId !== user.value?.id)
+      }
     } catch (e: any) {
       error.value = e.message || 'Failed to remove review'
       throw e
@@ -300,9 +373,10 @@ export function useSellers() {
     fetchSellers,
     fetchUserLists,
     createSeller,
+    deleteSeller,
     addToList,
     removeFromList,
-    reviewSeller: addReview,
+    reviewSeller: setReview,
     removeReview,
   }
 }
