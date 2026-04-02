@@ -39,6 +39,7 @@ const activeFilter = ref('all')
 const sortOptions = ['Newest', 'Oldest', 'Price: High', 'Price: Low', 'Rarity', 'A-Z']
 const activeSort = ref('Newest')
 const searchQuery = ref('')
+const filtersExpanded = ref(false)
 
 const filteredItems = computed(() => {
   let result = [...items.value]
@@ -146,7 +147,10 @@ const showAddModal = ref(false)
 
       <!-- Filters -->
       <section class="mb-4">
-        <div class="flex flex-wrap gap-2">
+        <div 
+          class="flex flex-wrap gap-2 overflow-hidden transition-all duration-200"
+          :class="filtersExpanded ? 'max-h-none' : 'max-h-10'"
+        >
           <button
             v-for="filter in filters"
             :key="filter.id"
@@ -157,6 +161,12 @@ const showAddModal = ref(false)
             {{ filter.label }}
           </button>
         </div>
+        <button
+          @click="filtersExpanded = !filtersExpanded"
+          class="text-sm text-rose-primary hover:text-rose-dark mt-2"
+        >
+          {{ filtersExpanded ? 'Show less' : 'Show more' }}
+        </button>
       </section>
 
       <!-- Sort -->
