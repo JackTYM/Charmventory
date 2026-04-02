@@ -28,7 +28,20 @@ interface ProfileData {
   items?: any[]
 }
 
+interface ForSaleItem {
+  id: string
+  user_id: string
+  name: string
+  item_number: string | null
+  type: string | null
+  is_for_sale: boolean
+  is_for_trade: boolean
+  asking_price: number | null
+  primary_image: string | null
+}
+
 const profile = ref<ProfileData | null>(null)
+const forSaleItems = ref<ForSaleItem[]>([])
 const loading = ref(true)
 const error = ref('')
 const activeTab = ref<'posts' | 'collection' | 'forSale'>('posts')
@@ -112,10 +125,33 @@ async function loadProfile() {
     // Load user's posts
     clearPosts()
     await fetchPosts({ userId: userData.id })
+
+    // Load for-sale/for-trade items (only for other users' profiles)
+    if (!isOwnProfile.value && profile.value?.privacy.forSale) {
+      await loadForSaleItems(userData.id)
+    }
   } catch (e: any) {
     error.value = e.message || 'Profile not found'
   } finally {
     loading.value = false
+  }
+}
+
+async function loadForSaleItems(userId: string) {
+  try {
+    const { data, error: fetchError } = await from('items_for_sale_public')
+      .select('*')
+      .eq('user_id', userId)
+      .order('name', { ascending: true })
+
+    if (fetchError) {
+      console.error('Error fetching for-sale items:', fetchError)
+      return
+    }
+
+    forSaleItems.value = data || []
+  } catch (e) {
+    console.error('Error loading for-sale items:', e)
   }
 }
 
@@ -195,6 +231,16 @@ function formatDate(dateStr: string) {
           >
             Posts
           </button>
+          <button
+            v-if="!isOwnProfile && forSaleItems.length > 0"
+            @click="activeTab = 'forSale'"
+            class="flex-1 py-3 text-sm font-medium transition-colors"
+            :class="activeTab === 'forSale'
+              ? 'text-rose-primary border-b-2 border-rose-primary'
+              : 'text-muted dark:text-ash'"
+          >
+            For Sale/Trade ({{ forSaleItems.length }})
+          </button>
         </div>
       </section>
 
@@ -220,6 +266,68 @@ function formatDate(dateStr: string) {
               <span class="text-xs p-2 text-center line-clamp-3">{{ post.content }}</span>
             </div>
           </NuxtLink>
+        </div>
+      </section>
+
+      <!-- Tab Content: For Sale/Trade -->
+      <section v-if="activeTab === 'forSale' && !isOwnProfile">
+        <div v-if="forSaleItems.length === 0" class="text-center py-12 text-muted dark:text-ash">
+          No items for sale or trade
+        </div>
+
+        <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div
+            v-for="item in forSaleItems"
+            :key="item.id"
+            class="bg-light-bg-alt dark:bg-dark-elevated rounded-lg overflow-hidden shadow-sm"
+          >
+            <!-- Item Image -->
+            <div class="aspect-square bg-light-bg dark:bg-dark-surface">
+              <img
+                v-if="item.primary_image"
+                :src="item.primary_image"
+                :alt="item.name"
+                class="w-full h-full object-cover"
+              />
+              <div v-else class="w-full h-full flex items-center justify-center text-muted dark:text-ash">
+                <svg class="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Item Details -->
+            <div class="p-3">
+              <h3 class="font-medium text-sm text-ink dark:text-pearl line-clamp-2 mb-1">
+                {{ item.name }}
+              </h3>
+
+              <p v-if="item.item_number" class="text-xs text-muted dark:text-ash mb-2">
+                {{ item.item_number }}
+              </p>
+
+              <!-- Status Badges -->
+              <div class="flex flex-wrap gap-1 mb-2">
+                <span
+                  v-if="item.is_for_sale"
+                  class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                >
+                  For Sale
+                </span>
+                <span
+                  v-if="item.is_for_trade"
+                  class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                >
+                  For Trade
+                </span>
+              </div>
+
+              <!-- Price -->
+              <p v-if="item.is_for_sale && item.asking_price" class="text-sm font-semibold text-rose-primary">
+                ${{ item.asking_price.toFixed(2) }}
+              </p>
+            </div>
+          </div>
         </div>
       </section>
     </template>
