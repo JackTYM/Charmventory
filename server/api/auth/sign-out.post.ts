@@ -1,6 +1,9 @@
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig(event)
-  const sessionToken = getCookie(event, 'session_token')
+  const cookieHeader = getHeader(event, 'cookie') || ''
+  
+  const sessionMatch = cookieHeader.match(/(?:__Secure-)?neon-auth\.session_token=([^;]+)/)
+  const sessionToken = sessionMatch ? sessionMatch[1] : null
 
   if (sessionToken) {
     try {
@@ -8,7 +11,7 @@ export default defineEventHandler(async (event) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Cookie': `neon_auth.session_token=${sessionToken}`
+          'Cookie': `__Secure-neon-auth.session_token=${sessionToken}`
         },
         body: '{}'
       })
@@ -16,7 +19,6 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  deleteCookie(event, 'session_token', { path: '/' })
   deleteCookie(event, 'auth_jwt', { path: '/' })
 
   return { success: true }

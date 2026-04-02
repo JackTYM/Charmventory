@@ -32,7 +32,7 @@ const COOKIE_OPTIONS = {
   secure: true,
   sameSite: 'lax' as const,
   path: '/',
-  maxAge: 60 * 60 * 24 * 30, // 30 days
+  maxAge: 60 * 60 * 24 * 30,
 }
 
 export default defineEventHandler(async (event) => {
@@ -60,12 +60,6 @@ export default defineEventHandler(async (event) => {
   const neonSessionCookie = neonAuthResponse.headers.get('set-cookie')
 
   const authResult = await neonAuthResponse.json()
-
-  console.log('Neon Auth full response:', JSON.stringify({
-    status: neonAuthResponse.status,
-    headers: Object.fromEntries(neonAuthResponse.headers.entries()),
-    body: authResult
-  }, null, 2))
 
   if (!neonAuthResponse.ok) {
     throw createError({
@@ -103,23 +97,14 @@ export default defineEventHandler(async (event) => {
       .where(eq(users.id, existingUser.id))
   }
 
-  let sessionToken = authResult.session?.token
-  
-  if (!sessionToken && neonSessionCookie) {
-    const match = neonSessionCookie.match(/neon_auth\.session_token=([^;]+)/)
-    if (match) {
-      sessionToken = match[1]
-    }
-  }
-
-  if (sessionToken) {
-    setCookie(event, 'session_token', sessionToken, COOKIE_OPTIONS)
+  if (neonSessionCookie) {
+    appendResponseHeader(event, 'Set-Cookie', neonSessionCookie)
   }
 
   if (jwt) {
     setCookie(event, 'auth_jwt', jwt, {
       ...COOKIE_OPTIONS,
-      maxAge: 60 * 15, // JWT expires in 15 min
+      maxAge: 60 * 15,
     })
   }
 

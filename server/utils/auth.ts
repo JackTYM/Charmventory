@@ -30,7 +30,10 @@ export async function getUserFromRequest(event: any): Promise<User | null> {
     }
   }
 
-  const sessionToken = getCookie(event, 'session_token')
+  const cookieHeader = getHeader(event, 'cookie') || ''
+  const sessionMatch = cookieHeader.match(/(?:__Secure-)?neon-auth\.session_token=([^;]+)/)
+  const sessionToken = sessionMatch ? sessionMatch[1] : null
+  
   if (!sessionToken) {
     return null
   }
@@ -46,7 +49,7 @@ export async function getUserFromRequest(event: any): Promise<User | null> {
     const response = await fetch(`${baseUrl}/get-session`, {
       method: 'GET',
       headers: {
-        'Cookie': `neon_auth.session_token=${sessionToken}`
+        'Cookie': `__Secure-neon-auth.session_token=${sessionToken}`
       }
     })
 

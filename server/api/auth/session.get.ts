@@ -1,6 +1,9 @@
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig(event)
-  const sessionToken = getCookie(event, 'session_token')
+  const cookieHeader = getHeader(event, 'cookie') || ''
+  
+  const sessionMatch = cookieHeader.match(/(?:__Secure-)?neon-auth\.session_token=([^;]+)/)
+  const sessionToken = sessionMatch ? sessionMatch[1] : null
 
   if (!sessionToken) {
     return { user: null }
@@ -10,13 +13,11 @@ export default defineEventHandler(async (event) => {
     const response = await fetch(`${config.neonAuthUrl}/get-session`, {
       method: 'GET',
       headers: {
-        'Cookie': `neon_auth.session_token=${sessionToken}`
+        'Cookie': `__Secure-neon-auth.session_token=${sessionToken}`
       }
     })
 
     if (!response.ok) {
-      deleteCookie(event, 'session_token', { path: '/' })
-      deleteCookie(event, 'auth_jwt', { path: '/' })
       return { user: null }
     }
 
@@ -34,8 +35,6 @@ export default defineEventHandler(async (event) => {
     const data = await response.json()
 
     if (!data?.user) {
-      deleteCookie(event, 'session_token', { path: '/' })
-      deleteCookie(event, 'auth_jwt', { path: '/' })
       return { user: null }
     }
 
