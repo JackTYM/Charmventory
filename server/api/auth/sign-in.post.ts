@@ -20,9 +20,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Email and password are required' })
   }
 
+  const origin = getHeader(event, 'origin') || 'https://app.charmventory.com'
+
   const neonAuthResponse = await fetch(`${config.neonAuthUrl}/sign-in/email`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Origin': origin
+    },
     body: JSON.stringify({ email, password })
   })
 
