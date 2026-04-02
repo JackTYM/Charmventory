@@ -13,14 +13,8 @@ onMounted(() => {
   }
 })
 
-// Handle unauthenticated on app subdomain
 function handleUnauthenticated() {
-  const host = window.location.hostname
-  if (host === 'app.charmventory.com') {
-    window.location.href = 'https://charmventory.com/auth/login'
-  } else {
-    navigateTo('/auth/login')
-  }
+  navigateTo('/auth/login')
 }
 
 const features = [
@@ -82,10 +76,10 @@ const features = [
 
           <!-- CTA Buttons -->
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <NuxtLink to="/auth/register" class="btn btn-primary text-lg px-8 py-4">
+            <NuxtLink to="https://app.charmventory.com/auth/register" external class="btn btn-primary text-lg px-8 py-4">
               Start Your Collection
             </NuxtLink>
-            <NuxtLink to="/auth/login" class="btn btn-secondary text-lg px-8 py-4">
+            <NuxtLink to="https://app.charmventory.com/auth/login" external class="btn btn-secondary text-lg px-8 py-4">
               Sign In
             </NuxtLink>
           </div>
@@ -143,7 +137,7 @@ const features = [
         <p class="text-white/80 mb-8">
           Create your free account and start organizing your Pandora collection today.
         </p>
-        <NuxtLink to="/auth/register" class="btn bg-white text-rose-primary hover:bg-light-bg px-8 py-4 text-lg">
+        <NuxtLink to="https://app.charmventory.com/auth/register" external class="btn bg-white text-rose-primary hover:bg-light-bg px-8 py-4 text-lg">
           Get Started Free
         </NuxtLink>
       </div>

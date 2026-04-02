@@ -254,10 +254,9 @@ export function useAuth() {
       // Ignore if module not available
     }
 
-    // Redirect to root domain login (or local /auth/login in dev)
     const host = typeof window !== 'undefined' ? window.location.hostname : ''
     if (host === 'app.charmventory.com' || host === 'database.charmventory.com') {
-      window.location.href = 'https://charmventory.com/auth/login'
+      window.location.href = 'https://app.charmventory.com/auth/login'
     } else {
       navigateTo('/auth/login')
     }

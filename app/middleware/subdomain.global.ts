@@ -17,7 +17,7 @@ export default defineNuxtRouteMiddleware((to) => {
     return navigateTo('https://app.charmventory.com' + to.path, { external: true })
   }
 
-  // app.charmventory.com - authenticated app
+  // app.charmventory.com - authenticated app + auth pages
   if (host === 'app.charmventory.com') {
     // Root (/) is handled by index.vue which shows HomeContent
     // Redirect /home to / for clean URLs
@@ -28,21 +28,20 @@ export default defineNuxtRouteMiddleware((to) => {
     if (to.path.startsWith('/database')) {
       return navigateTo('https://database.charmventory.com' + to.path, { external: true })
     }
-    // Auth pages redirect to root domain
+    // Auth pages stay on app subdomain (same origin as the app for localStorage)
     if (to.path.startsWith('/auth')) {
-      return navigateTo('https://charmventory.com' + to.path, { external: true })
+      return // Allow
     }
   }
 
-  // charmventory.com - landing page + auth only
+  // charmventory.com - landing page only
   if (host === 'charmventory.com' || host === 'www.charmventory.com') {
-    // Root shows hero (index.vue)
     if (to.path === '/') {
-      return // Allow - shows landing page
+      return
     }
-    // Auth pages stay on root domain
+    // Auth pages redirect to app subdomain
     if (to.path.startsWith('/auth')) {
-      return // Allow - login/register
+      return navigateTo('https://app.charmventory.com' + to.path, { external: true })
     }
     // Database goes to database subdomain
     if (to.path.startsWith('/database')) {
