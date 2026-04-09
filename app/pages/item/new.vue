@@ -28,6 +28,7 @@ const itemTypes = [
   { value: 'earring', label: 'Earring' },
   { value: 'necklace', label: 'Necklace' },
   { value: 'pendant', label: 'Pendant' },
+  { value: 'watch', label: 'Watch' },
   { value: 'brooch', label: 'Brooch' },
   { value: 'keychain', label: 'Key Chain' },
   { value: 'ornament', label: 'Ornament' },

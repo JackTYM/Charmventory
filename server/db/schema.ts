@@ -4,7 +4,7 @@ import { relations } from 'drizzle-orm'
 // Enums
 export const itemTypeEnum = pgEnum('item_type', [
   'charm', 'clip', 'murano', 'safety_chain', 'spacer', 'earring', 'necklace',
-  'bracelet', 'bangle', 'ring', 'brooch', 'pendant', 'ornament', 'keychain',
+  'bracelet', 'bangle', 'ring', 'brooch', 'pendant', 'watch', 'ornament', 'keychain',
   'box', 'catalogue', 'gift_with_purchase', 'other'
 ])
 

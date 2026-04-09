@@ -27,6 +27,7 @@ const filters = [
   { id: 'earring', label: 'Earrings' },
   { id: 'necklace', label: 'Necklaces' },
   { id: 'pendant', label: 'Pendants' },
+  { id: 'watch', label: 'Watches' },
   { id: 'brooch', label: 'Brooches' },
   { id: 'keychain', label: 'Key Chains' },
   { id: 'ornament', label: 'Ornaments' },
@@ -102,6 +103,7 @@ function getItemImage(item: any) {
     ring: '💍',
     brooch: '🌸',
     pendant: '🎀',
+    watch: '⌚',
     box: '📦',
     catalogue: '📖',
     gift_with_purchase: '🎁',
@@ -124,7 +126,7 @@ const showAddModal = ref(false)
       <!-- Header -->
       <section class="mb-6">
         <h1 class="font-display text-3xl lg:text-4xl text-ink dark:text-pearl text-center mb-2">
-          My Catalog
+          My Inventory
         </h1>
         <p class="text-muted dark:text-ash text-center text-sm">{{ items.length }} Items</p>
       </section>
@@ -200,7 +202,7 @@ const showAddModal = ref(false)
           </svg>
         </div>
         <h2 class="font-display text-2xl text-ink dark:text-pearl mb-2">
-          {{ searchQuery || activeFilter !== 'all' ? 'No items found' : 'Your catalog is empty' }}
+          {{ searchQuery || activeFilter !== 'all' ? 'No items found' : 'Your inventory is empty' }}
         </h2>
         <p class="text-muted dark:text-ash mb-6">
           {{ searchQuery || activeFilter !== 'all' ? 'Try adjusting your filters.' : 'Start adding charms to build your collection.' }}

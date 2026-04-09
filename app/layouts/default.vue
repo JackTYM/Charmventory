@@ -8,7 +8,7 @@ const showMobileMenu = ref(false)
 
 const navItems = [
   { path: '/home', label: 'Home', icon: '🏠' },
-  { path: '/catalog', label: 'Catalog', icon: '💎' },
+  { path: '/catalog', label: 'Inventory', icon: '💎' },
   { path: '/wishlist', label: 'Wishlist', icon: '⭐' },
   { path: '/sellers', label: 'Sources', icon: '🏪' },
   { path: '/feed', label: 'Feed', icon: '📸' },

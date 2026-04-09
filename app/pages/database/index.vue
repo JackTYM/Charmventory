@@ -103,6 +103,7 @@ const types = [
   { value: 'earring', label: 'Earrings' },
   { value: 'necklace', label: 'Necklaces' },
   { value: 'pendant', label: 'Pendants' },
+  { value: 'watch', label: 'Watches' },
   { value: 'brooch', label: 'Brooches' },
   { value: 'keychain', label: 'Key Chains' },
   { value: 'ornament', label: 'Ornaments' },

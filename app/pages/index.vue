@@ -59,10 +59,10 @@ const features = [
   <div v-else class="min-h-screen bg-rose-pale dark:bg-dark-bg">
     <!-- Hero Section -->
     <section>
-      <div class="px-4 py-16 lg:py-24 max-w-6xl mx-auto">
+      <div class="px-4 pt-8 pb-12 lg:pt-24 lg:pb-24 max-w-6xl mx-auto">
         <div class="text-center">
           <!-- Logo -->
-          <img src="/logo.png" alt="Charmventory" class="h-32 lg:h-48 mx-auto mb-8 dark:bg-white/90 dark:rounded-lg dark:p-2" />
+          <img src="/logo.png" alt="Charmventory" class="h-24 lg:h-48 mx-auto mb-8 dark:bg-white/90 dark:rounded-lg dark:p-2" />
 
           <!-- Tagline -->
           <h1 class="font-display text-3xl lg:text-5xl text-ink dark:text-pearl mb-6">
