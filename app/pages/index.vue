@@ -57,6 +57,18 @@ const features = [
 
   <!-- Root domain: show landing page -->
   <div v-else class="min-h-screen bg-rose-pale dark:bg-dark-bg">
+    <!-- Yarger Development Banner -->
+    <a
+      href="https://yargerdevelopment.com"
+      target="_blank"
+      rel="noopener"
+      class="block text-center py-2.5 px-4 text-sm transition-all hover:brightness-110"
+      style="background: #07091a; color: #e2e8f0; font-family: 'DM Sans', sans-serif;"
+    >
+      Built by <span style="color: oklch(0.65 0.22 255); font-weight: 600;">Yarger Development</span> — Custom websites for businesses & big ideas.
+      <span class="hidden sm:inline ml-1" style="color: #94a3b8;">Learn more →</span>
+    </a>
+
     <!-- Hero Section -->
     <section>
       <div class="px-4 pt-8 pb-12 lg:pt-24 lg:pb-24 max-w-6xl mx-auto">
