@@ -67,10 +67,8 @@ export default defineEventHandler(async () => {
           } else {
             status = 'partial'
           }
-        } else if (catalog) {
-          // Has catalog but no approved revision yet
-          status = 'partial'
         }
+        // If catalog exists but no approved revision, keep status as 'missing'
 
         result.push({
           year,
