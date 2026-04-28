@@ -1,3 +1,5 @@
+import { resetDataApiClient } from './useDataApi'
+
 interface User {
   id: string
   email: string
@@ -75,6 +77,9 @@ export function useAuth() {
   }
 
   async function signUp(email: string, password: string, name: string) {
+    // Reset Data API client to ensure fresh JWT is used
+    resetDataApiClient()
+
     const response = await fetch('/api/auth/sign-up', {
       method: 'POST',
       credentials: 'include',
@@ -97,6 +102,9 @@ export function useAuth() {
   }
 
   async function signIn(email: string, password: string) {
+    // Reset Data API client to ensure fresh JWT is used
+    resetDataApiClient()
+
     const response = await fetch('/api/auth/sign-in', {
       method: 'POST',
       credentials: 'include',
@@ -121,11 +129,16 @@ export function useAuth() {
   async function signOut() {
     user.value = null
     clearStorage()
+    resetDataApiClient()
 
-    fetch('/api/auth/sign-out', {
-      method: 'POST',
-      credentials: 'include'
-    }).catch(() => {})
+    try {
+      await fetch('/api/auth/sign-out', {
+        method: 'POST',
+        credentials: 'include'
+      })
+    } catch {
+      // Continue with logout even if API call fails
+    }
 
     window.location.href = '/auth/login'
   }

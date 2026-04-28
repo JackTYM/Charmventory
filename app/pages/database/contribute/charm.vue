@@ -196,14 +196,6 @@ onUnmounted(() => {
       </p>
     </section>
 
-    <!-- Auth Warning -->
-    <div v-if="!isAuthenticated" class="mb-8 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-      <p class="text-amber-700 dark:text-amber-400 text-sm">
-        <NuxtLink to="/auth/login" class="font-medium underline">Sign in</NuxtLink> to get credit for your contributions!
-        You can still submit anonymously.
-      </p>
-    </div>
-
     <!-- Success -->
     <div v-if="submitSuccess" class="text-center py-16">
       <div class="text-6xl mb-4">🎉</div>
