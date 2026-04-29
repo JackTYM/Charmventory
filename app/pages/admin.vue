@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { useAuth } from '~/composables/useAuth'
+import { useAdminData, type AdminUserWithStats, type UserSortField } from '~/composables/useAdminData'
 
 const { user, checkSession } = useAuth()
+const { fetchUsers } = useAdminData()
 const ADMIN_EMAIL = 'jacksonkyarger@gmail.com'
 
 const isAdmin = computed(() => user.value?.email === ADMIN_EMAIL)
@@ -62,6 +64,8 @@ interface CharmContribution {
 
 const pendingRevisions = ref<PendingRevision[]>([])
 const charmContributions = ref<CharmContribution[]>([])
+const adminUsers = ref<AdminUserWithStats[]>([])
+const totalUserCount = ref(0)
 const loading = ref(true)
 const error = ref('')
 
@@ -71,8 +75,11 @@ const reviewNote = ref('')
 const processing = ref(false)
 
 const scrapers = ref<ScraperInfo[]>([])
-const activeTab = ref<'revisions' | 'contributions'>('contributions')
+const activeTab = ref<'revisions' | 'contributions' | 'users'>('contributions')
 const runningScraperName = ref<string | null>(null)
+
+const userSortBy = ref<UserSortField>('created_at')
+const userSortOrder = ref<'asc' | 'desc'>('desc')
 
 onMounted(async () => {
   await checkSession()
@@ -80,6 +87,7 @@ onMounted(async () => {
     await Promise.all([
       loadPendingRevisions(),
       loadCharmContributions(),
+      loadUsers(),
     ])
   }
   loading.value = false
@@ -99,6 +107,26 @@ async function loadCharmContributions() {
   } catch (e: any) {
     console.error('Failed to load charm contributions:', e)
   }
+}
+
+async function loadUsers() {
+  try {
+    const response = await fetchUsers(userSortBy.value, userSortOrder.value)
+    adminUsers.value = response.users
+    totalUserCount.value = response.total
+  } catch (e: any) {
+    console.error('Failed to load users:', e)
+  }
+}
+
+function changeUserSort(field: UserSortField) {
+  if (userSortBy.value === field) {
+    userSortOrder.value = userSortOrder.value === 'desc' ? 'asc' : 'desc'
+  } else {
+    userSortBy.value = field
+    userSortOrder.value = 'desc'
+  }
+  loadUsers()
 }
 
 async function loadScrapers() {
@@ -269,6 +297,13 @@ function formatDate(dateStr: string) {
       <section class="mb-8 bg-light-card dark:bg-dark-card rounded-lg p-6 shadow-card">
         <div class="flex items-center gap-6 flex-wrap">
           <div class="flex items-center gap-4">
+            <div class="text-4xl">👥</div>
+            <div>
+              <p class="text-2xl font-display text-ink dark:text-pearl">{{ totalUserCount }}</p>
+              <p class="text-sm text-muted dark:text-ash">Total Users</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
             <div class="text-4xl">💎</div>
             <div>
               <p class="text-2xl font-display text-ink dark:text-pearl">{{ charmContributions.length }}</p>
@@ -286,7 +321,16 @@ function formatDate(dateStr: string) {
       </section>
 
       <!-- Tabs -->
-      <div class="flex gap-2 mb-6">
+      <div class="flex gap-2 mb-6 flex-wrap">
+        <button
+          @click="activeTab = 'users'"
+          class="px-4 py-2 rounded-lg font-medium transition-colors"
+          :class="activeTab === 'users'
+            ? 'bg-rose-primary text-white'
+            : 'bg-light-card dark:bg-dark-card text-muted dark:text-ash hover:text-ink dark:hover:text-pearl'"
+        >
+          Users ({{ totalUserCount }})
+        </button>
         <button
           @click="activeTab = 'contributions'"
           class="px-4 py-2 rounded-lg font-medium transition-colors"
@@ -306,6 +350,124 @@ function formatDate(dateStr: string) {
           Catalog Revisions ({{ pendingRevisions.length }})
         </button>
       </div>
+
+      <!-- Users Section -->
+      <section v-if="activeTab === 'users'" class="bg-light-card dark:bg-dark-card rounded-lg shadow-card overflow-hidden mb-8">
+        <div class="p-4 border-b border-light-border dark:border-dark-border">
+          <h3 class="font-display text-lg text-ink dark:text-pearl mb-3">
+            All Users
+          </h3>
+
+          <!-- Sort Controls -->
+          <div class="flex flex-wrap gap-2 text-sm">
+            <span class="text-muted dark:text-ash">Sort by:</span>
+            <button
+              @click="changeUserSort('created_at')"
+              class="px-3 py-1 rounded transition-colors"
+              :class="userSortBy === 'created_at'
+                ? 'bg-rose-primary/20 text-rose-primary'
+                : 'bg-light-bg dark:bg-dark-elevated text-muted dark:text-ash hover:text-ink dark:hover:text-pearl'"
+            >
+              Joined {{ userSortBy === 'created_at' ? (userSortOrder === 'desc' ? '↓' : '↑') : '' }}
+            </button>
+            <button
+              @click="changeUserSort('updated_at')"
+              class="px-3 py-1 rounded transition-colors"
+              :class="userSortBy === 'updated_at'
+                ? 'bg-rose-primary/20 text-rose-primary'
+                : 'bg-light-bg dark:bg-dark-elevated text-muted dark:text-ash hover:text-ink dark:hover:text-pearl'"
+            >
+              Last Active {{ userSortBy === 'updated_at' ? (userSortOrder === 'desc' ? '↓' : '↑') : '' }}
+            </button>
+            <button
+              @click="changeUserSort('name')"
+              class="px-3 py-1 rounded transition-colors"
+              :class="userSortBy === 'name'
+                ? 'bg-rose-primary/20 text-rose-primary'
+                : 'bg-light-bg dark:bg-dark-elevated text-muted dark:text-ash hover:text-ink dark:hover:text-pearl'"
+            >
+              Name {{ userSortBy === 'name' ? (userSortOrder === 'desc' ? '↓' : '↑') : '' }}
+            </button>
+            <button
+              @click="changeUserSort('item_count')"
+              class="px-3 py-1 rounded transition-colors"
+              :class="userSortBy === 'item_count'
+                ? 'bg-rose-primary/20 text-rose-primary'
+                : 'bg-light-bg dark:bg-dark-elevated text-muted dark:text-ash hover:text-ink dark:hover:text-pearl'"
+            >
+              Listings {{ userSortBy === 'item_count' ? (userSortOrder === 'desc' ? '↓' : '↑') : '' }}
+            </button>
+            <button
+              @click="changeUserSort('post_count')"
+              class="px-3 py-1 rounded transition-colors"
+              :class="userSortBy === 'post_count'
+                ? 'bg-rose-primary/20 text-rose-primary'
+                : 'bg-light-bg dark:bg-dark-elevated text-muted dark:text-ash hover:text-ink dark:hover:text-pearl'"
+            >
+              Posts {{ userSortBy === 'post_count' ? (userSortOrder === 'desc' ? '↓' : '↑') : '' }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="adminUsers.length === 0" class="p-8 text-center text-muted dark:text-ash">
+          <div class="text-4xl mb-4">👤</div>
+          <p>No users found.</p>
+        </div>
+
+        <div v-else class="divide-y divide-light-border dark:divide-dark-border">
+          <div
+            v-for="u in adminUsers"
+            :key="u.id"
+            class="p-4 hover:bg-light-bg dark:hover:bg-dark-elevated transition-colors"
+          >
+            <div class="flex items-center gap-4">
+              <!-- Avatar -->
+              <div class="flex-shrink-0">
+                <img
+                  v-if="u.avatar"
+                  :src="u.avatar"
+                  :alt="u.name || u.email"
+                  class="w-12 h-12 rounded-full object-cover"
+                />
+                <div
+                  v-else
+                  class="w-12 h-12 rounded-full bg-rose-primary/20 flex items-center justify-center text-rose-primary font-medium text-lg"
+                >
+                  {{ (u.name || u.email).charAt(0).toUpperCase() }}
+                </div>
+              </div>
+
+              <!-- User Info -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <h4 class="font-medium text-ink dark:text-pearl truncate">
+                    {{ u.name || 'No name' }}
+                  </h4>
+                  <span v-if="u.slug" class="text-xs text-muted dark:text-ash">
+                    @{{ u.slug }}
+                  </span>
+                </div>
+                <p class="text-sm text-muted dark:text-ash truncate">{{ u.email }}</p>
+                <p class="text-xs text-muted dark:text-ash mt-1">
+                  Joined {{ formatDate(u.created_at) }}
+                </p>
+              </div>
+
+              <!-- Stats -->
+              <div class="flex gap-6 text-center flex-shrink-0">
+                <div>
+                  <p class="text-lg font-display text-ink dark:text-pearl">{{ u.item_count }}</p>
+                  <p class="text-xs text-muted dark:text-ash">Items</p>
+                </div>
+                <div>
+                  <p class="text-lg font-display text-ink dark:text-pearl">{{ u.post_count }}</p>
+                  <p class="text-xs text-muted dark:text-ash">Posts</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <!-- Charm Contributions Section -->
       <section v-if="activeTab === 'contributions'" class="bg-light-card dark:bg-dark-card rounded-lg shadow-card overflow-hidden mb-8">
