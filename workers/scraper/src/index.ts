@@ -8,6 +8,7 @@ interface Env {
   BROWSER: Fetcher
   DATABASE_URL: string
   SCRAPER_ENABLED: string
+  SCRAPER_SECRET: string
 }
 
 interface ScrapedCharm {
@@ -164,9 +165,20 @@ export default {
     }
 
     // Manual trigger endpoint (for testing) - run synchronously for debugging
+    // Requires Authorization header with secret token
     // Use ?scraper=hannoush to run a single scraper
     if (url.pathname === '/run' && request.method === 'POST') {
-      console.log('Manual trigger received')
+      // Verify secret token
+      const authHeader = request.headers.get('Authorization')
+      const expectedToken = `Bearer ${env.SCRAPER_SECRET}`
+      if (!env.SCRAPER_SECRET || authHeader !== expectedToken) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      console.log('Manual trigger received (authorized)')
       console.log('DATABASE_URL set:', !!env.DATABASE_URL)
       console.log('BROWSER set:', !!env.BROWSER)
       console.log('SCRAPER_ENABLED:', env.SCRAPER_ENABLED)
