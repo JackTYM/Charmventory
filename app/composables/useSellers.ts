@@ -93,11 +93,13 @@ export function useSellers() {
   async function fetchUserLists() {
     loading.value = true
     error.value = null
+    const { user } = useAuth()
 
     try {
-      // Fetch user lists without join to avoid ambiguity
+      // Fetch user lists - explicitly filter by current user to avoid admin RLS showing all
       const { data, error: queryError } = await from('user_seller_lists')
         .select('*')
+        .eq('user_id', user.value?.id)
 
       if (queryError) throw new Error(queryError.message)
       if (!data || data.length === 0) {

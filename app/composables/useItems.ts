@@ -93,15 +93,17 @@ const error = ref<string | null>(null)
 
 export function useItems() {
   const { from } = useDataApi()
+  const { user } = useAuth()
 
   async function fetchItems() {
     loading.value = true
     error.value = null
 
     try {
-      // Fetch items
+      // Fetch items - explicitly filter by current user to avoid admin RLS showing all items
       const { data: itemsData, error: itemsError } = await from('items')
         .select('*')
+        .eq('user_id', user.value?.id)
         .order('created_at', { ascending: false })
 
       if (itemsError) throw new Error(itemsError.message)
