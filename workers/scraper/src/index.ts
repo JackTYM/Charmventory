@@ -59,8 +59,8 @@ const SHOPIFY_SCRAPERS = [
   },
 ]
 
-// Browser-based scrapers (need Puppeteer for Cloudflare bypass)
-const BROWSER_SCRAPERS = ['pandora-net']
+// Browser-based scrapers (need Puppeteer for Cloudflare bypass or JS rendering)
+const BROWSER_SCRAPERS = ['pandora-net', 'flipsnack']
 
 export default {
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
@@ -310,6 +310,14 @@ async function runBrowserScraper(name: string, env: Env): Promise<ScraperResult>
           errors.push(`Category ${category}: ${e.message}`)
         }
       }
+    } else if (name === 'flipsnack') {
+      // Scrape Flipsnack catalogs
+      try {
+        const flipsnackCharms = await scrapeFlipsnack(page)
+        charms.push(...flipsnackCharms)
+      } catch (e: any) {
+        errors.push(`Flipsnack: ${e.message}`)
+      }
     }
   } finally {
     await browser.close()
@@ -371,6 +379,142 @@ async function scrapePandoraCategory(page: any, category: string): Promise<Scrap
         imageUrls: product.imageUrl ? [product.imageUrl] : [],
       })
     }
+  }
+
+  return charms
+}
+
+async function scrapeFlipsnack(page: any): Promise<ScrapedCharm[]> {
+  const charms: ScrapedCharm[] = []
+  const seenStyleIds = new Set<string>()
+
+  // Known Flipsnack catalog URLs
+  const catalogUrls = [
+    'https://www.flipsnack.com/pandoranorthamerica/ss26-ipc-us/full-view.html',
+    'https://www.flipsnack.com/pandoranorthamerica/ss26-ipc-ca/full-view.html',
+    'https://www.flipsnack.com/pandoranorthamerica/aw25-ipc-us/full-view.html',
+    'https://www.flipsnack.com/pandoranorthamerica/aw25-ipc-ca/full-view.html',
+  ]
+
+  for (const catalogUrl of catalogUrls) {
+    try {
+      // Navigate and intercept data.json request
+      let dataJsonUrl: string | null = null
+
+      // Set up request interception
+      await page.setRequestInterception(true)
+
+      const requestHandler = (request: any) => {
+        const reqUrl = request.url()
+        if (reqUrl.includes('data.json') && reqUrl.includes('cloudfront.net')) {
+          dataJsonUrl = reqUrl
+        }
+        request.continue()
+      }
+
+      page.on('request', requestHandler)
+
+      try {
+        await page.goto(catalogUrl, { waitUntil: 'networkidle0', timeout: 30000 })
+        // Brief wait for data.json request to be captured
+        await new Promise(r => setTimeout(r, 2000))
+      } catch (e: any) {
+        console.log(`Navigation warning for ${catalogUrl}: ${e.message}`)
+      }
+
+      page.off('request', requestHandler)
+      await page.setRequestInterception(false)
+
+      if (!dataJsonUrl) {
+        console.log(`Could not find data.json for ${catalogUrl}`)
+        continue
+      }
+
+      console.log(`Found data.json: ${dataJsonUrl.substring(0, 60)}...`)
+
+      // Fetch the data.json directly
+      const response = await fetch(dataJsonUrl)
+      if (!response.ok) {
+        console.log(`Failed to fetch data.json: ${response.status}`)
+        continue
+      }
+
+      const catalogData = await response.json()
+
+      // Extract charms from the catalog data
+      const extractedCharms = extractCharmsFromFlipsnackData(catalogData, seenStyleIds)
+      charms.push(...extractedCharms)
+
+      console.log(`Extracted ${extractedCharms.length} charms from ${catalogUrl}`)
+    } catch (e: any) {
+      console.error(`Error processing ${catalogUrl}: ${e.message}`)
+    }
+  }
+
+  return charms
+}
+
+function extractCharmsFromFlipsnackData(data: any, seenStyleIds: Set<string>): ScrapedCharm[] {
+  const charms: ScrapedCharm[] = []
+  const FLIPSNACK_IMAGE_BASE = 'https://d160aj0mj3npgx.cloudfront.net/A769E699E8C/library/external/'
+
+  // Recursively find all layers with product data
+  function findLayers(obj: any, layers: any[] = []): any[] {
+    if (!obj || typeof obj !== 'object') return layers
+
+    if (obj.attributes || obj.layerLabel) {
+      layers.push(obj)
+    }
+
+    if (Array.isArray(obj)) {
+      for (const item of obj) {
+        findLayers(item, layers)
+      }
+    } else {
+      for (const value of Object.values(obj)) {
+        findLayers(value, layers)
+      }
+    }
+
+    return layers
+  }
+
+  const layers = findLayers(data)
+
+  for (const layer of layers) {
+    const attrs = layer.attributes
+    if (!attrs) continue
+
+    const styleId = attrs.code || layer.layerLabel
+    if (!styleId) continue
+
+    // Validate style ID format
+    if (!/^\d{6}[A-Z0-9]*$/i.test(styleId)) continue
+
+    const normalizedId = styleId.toUpperCase()
+    if (seenStyleIds.has(normalizedId)) continue
+    seenStyleIds.add(normalizedId)
+
+    // Extract images from media array
+    const images: string[] = []
+    if (attrs.media && Array.isArray(attrs.media)) {
+      for (const media of attrs.media) {
+        if (media.hash && typeof media.hash === 'string' && media.hash.length === 32) {
+          images.push(FLIPSNACK_IMAGE_BASE + media.hash)
+        }
+      }
+    }
+
+    charms.push({
+      styleId: normalizedId,
+      name: attrs.title || '',
+      brand: 'Pandora',
+      description: attrs.description?.slice(0, 500),
+      originalPrice: attrs.price ? parseFloat(attrs.price) : undefined,
+      currency: 'USD',
+      region: 'US',
+      imageUrls: images.length > 0 ? images : undefined,
+    })
   }
 
   return charms
