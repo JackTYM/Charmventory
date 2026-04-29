@@ -91,16 +91,22 @@ class PandoraNetScraper extends BaseScraper {
       // Navigate to a category page to trigger API calls
       await this.browserPage!.goto(`${this.baseUrl}/en/charms/`, {
         waitUntil: 'networkidle2',
-        timeout: 60000,
+        timeout: 45000,
       })
+    } catch (e: any) {
+      // Continue even if navigation times out - we may have captured auth already
+      this.log(`Navigation warning (continuing): ${e.message}`)
+    }
 
+    try {
       // Wait for API calls to complete
-      await this.delay(5000)
+      await this.delay(3000)
 
       // Scroll to trigger more API calls if needed
       await this.browserPage!.evaluate(() => window.scrollTo(0, 1000))
       await this.delay(2000)
-
+    } catch {
+      // Ignore scroll errors
     } finally {
       this.browserPage!.off('request', requestHandler)
       await this.browserPage!.setRequestInterception(false)
@@ -117,9 +123,10 @@ class PandoraNetScraper extends BaseScraper {
 
     while (hasMore) {
       try {
-        // Use the correct API format: limit (not count), locale, source params
-        const apiUrl = `${this.baseUrl}/mobify/proxy/dol/product-search?` +
-          `limit=${pageSize}&locale=en-US&offset=${offset}&refine=cgid%3D${categoryId}&source=PWA`
+        // Updated API endpoint - they changed from product-search to products/search
+        const pageUrl = encodeURIComponent(`${this.baseUrl}/en/${categoryId}/`)
+        const apiUrl = `${this.baseUrl}/mobify/proxy/dol/products/search?` +
+          `categoryId=${categoryId}&limit=${pageSize}&locale=en-US&offset=${offset}&source=PWASearchByBR&url=${pageUrl}`
 
         this.log(`Fetching ${apiUrl.substring(0, 80)}... (offset=${offset})`)
 
@@ -129,6 +136,7 @@ class PandoraNetScraper extends BaseScraper {
               method: 'GET',
               headers: {
                 'Accept': 'application/json',
+                'x-environment': 'production',
                 ...headers,
               },
               credentials: 'include',
@@ -155,21 +163,23 @@ class PandoraNetScraper extends BaseScraper {
         }
 
         const data = response.data
-        if (!data.hits || !Array.isArray(data.hits)) {
-          this.log('No hits in response, done with category')
+        // New API uses 'data' array instead of 'hits'
+        const products = data.data || data.hits
+        if (!products || !Array.isArray(products)) {
+          this.log('No products in response, done with category')
           break
         }
 
-        total = data.total || data.hits.length
-        this.log(`Got ${data.hits.length} products (${offset + data.hits.length}/${total})`)
+        total = data.total || products.length
+        this.log(`Got ${products.length} products (${offset + products.length}/${total})`)
 
         // Process products
-        for (const product of data.hits) {
+        for (const product of products) {
           await this.processProduct(product, categoryId, categoryName)
         }
 
-        offset += data.hits.length
-        hasMore = offset < total && data.hits.length > 0
+        offset += products.length
+        hasMore = offset < total && products.length > 0
 
         // Rate limit between pages
         await this.delay(1000)
@@ -304,9 +314,11 @@ class PandoraNetScraper extends BaseScraper {
 
     this.charmsFound++
 
-    // Extract image URL
+    // Extract image URL - new API uses primaryImage.link
     let imageUrl: string | undefined
-    if (product.image) {
+    if (product.primaryImage?.link) {
+      imageUrl = product.primaryImage.link
+    } else if (product.image) {
       if (typeof product.image === 'string') {
         imageUrl = product.image
       } else if (product.image.disBaseLink || product.image.link) {
@@ -321,21 +333,24 @@ class PandoraNetScraper extends BaseScraper {
     let name = (product.productName || product.name || '').trim()
     name = name.replace(/^Final Sale\s*-\s*/i, '')
 
+    // Extract materials from new API format (custom.metalName)
+    const materials = product.custom?.metalName || this.extractMaterials(product)
+
     // Build charm data
     const charm: ScrapedCharm = {
       styleId,
       name,
       brand: 'Pandora',
       collection: this.extractCollection(product),
-      originalPrice: product.price || product.prices?.sale || product.prices?.list,
+      originalPrice: product.price || product.salePrice || product.prices?.sale || product.prices?.list,
       currency: 'USD',
       region: 'US',
       description: product.shortDescription || product.longDescription,
-      materials: this.extractMaterials(product),
+      materials: Array.isArray(materials) ? materials : this.extractMaterials(product),
       colors: this.extractColors(product),
       type: this.mapCategory(categoryName),
       imageUrls: imageUrl ? [imageUrl] : undefined,
-      isRetired: product.orderable === false,
+      isRetired: product.isOrderable === false,
     }
 
     await this.saveCharm(charm)

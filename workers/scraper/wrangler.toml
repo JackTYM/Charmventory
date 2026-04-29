@@ -6,9 +6,11 @@ compatibility_flags = ["nodejs_compat"]
 # Browser Rendering binding
 browser = { binding = "BROWSER" }
 
-# Cron triggers - run daily at midnight UTC
+# Cron triggers - staggered to avoid timeouts and browser rate limits
+# Shopify + Direct scrapers at midnight UTC
+# Browser scrapers at 1 AM and 2 AM UTC (separate to avoid rate limits)
 [triggers]
-crons = ["0 0 * * *"]
+crons = ["0 0 * * *", "0 1 * * *", "0 2 * * *"]
 
 # Environment variables (set secrets via `wrangler secret put`)
 [vars]
