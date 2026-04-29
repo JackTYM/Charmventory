@@ -5,14 +5,24 @@ definePageMeta({
 
 import { useAuth } from '~/composables/useAuth'
 import { useUpload } from '~/composables/useUpload'
+import { useCharmDatabase } from '~/composables/useCharmDatabase'
 
 const { isAuthenticated, checkSession } = useAuth()
 const { uploadImage } = useUpload()
+const { searchCharms } = useCharmDatabase()
 
 // Form state
 const submitting = ref(false)
 const submitError = ref('')
 const submitSuccess = ref(false)
+
+// Search state
+const searchQuery = ref('')
+const searchResults = ref<any[]>([])
+const searchLoading = ref(false)
+const showSearchResults = ref(false)
+const selectedFromSearch = ref(false)
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
 const form = reactive({
   styleId: '',
@@ -76,6 +86,65 @@ const collections = [
 
 const currencies = ['USD', 'EUR', 'GBP', 'AUD', 'CAD']
 const regions = ['US', 'UK', 'EU', 'AU', 'CA', 'Asia', 'Global']
+
+async function handleSearch() {
+  if (searchTimeout) clearTimeout(searchTimeout)
+
+  if (!searchQuery.value || searchQuery.value.length < 2) {
+    searchResults.value = []
+    showSearchResults.value = false
+    return
+  }
+
+  searchTimeout = setTimeout(async () => {
+    searchLoading.value = true
+    try {
+      const results = await searchCharms({
+        search: searchQuery.value,
+        limit: 10,
+      })
+      searchResults.value = results || []
+      showSearchResults.value = true
+    } catch (e) {
+      console.error('Search failed:', e)
+      searchResults.value = []
+    } finally {
+      searchLoading.value = false
+    }
+  }, 300)
+}
+
+function selectCharm(charm: any) {
+  form.styleId = charm.styleId || ''
+  form.name = charm.name || ''
+  form.brand = charm.brand || 'Pandora'
+  form.collection = charm.collection || ''
+  form.type = charm.type || 'charm'
+  form.originalPrice = charm.originalPrice || null
+  form.currency = charm.currency || 'USD'
+  form.region = charm.region || ''
+  form.catalogueSeason = charm.catalogueSeason || ''
+  form.materials = Array.isArray(charm.materials) ? charm.materials.join(', ') : ''
+  form.colors = Array.isArray(charm.colors) ? charm.colors.join(', ') : ''
+  form.description = charm.description || ''
+  form.isLimited = charm.isLimited || false
+  form.isCountryExclusive = charm.isCountryExclusive || false
+  form.exclusiveCountry = charm.exclusiveCountry || ''
+
+  if (charm.releaseDate) {
+    form.releaseDate = charm.releaseDate.split('T')[0]
+  }
+
+  selectedFromSearch.value = true
+  showSearchResults.value = false
+  searchQuery.value = ''
+}
+
+function clearSearch() {
+  searchQuery.value = ''
+  searchResults.value = []
+  showSearchResults.value = false
+}
 
 function handleImageSelect(e: Event) {
   const input = e.target as HTMLInputElement
@@ -168,16 +237,28 @@ function resetForm() {
   form.notes = ''
   removeImage()
   submitSuccess.value = false
+  selectedFromSearch.value = false
+  clearSearch()
+}
+
+function handleClickOutside(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  if (!target.closest('.search-container')) {
+    showSearchResults.value = false
+  }
 }
 
 onMounted(async () => {
   await checkSession()
+  document.addEventListener('click', handleClickOutside)
 })
 
 onUnmounted(() => {
   if (imagePreview.value) {
     URL.revokeObjectURL(imagePreview.value)
   }
+  document.removeEventListener('click', handleClickOutside)
+  if (searchTimeout) clearTimeout(searchTimeout)
 })
 </script>
 
@@ -221,6 +302,90 @@ onUnmounted(() => {
       <div v-if="submitError" class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-600 dark:text-red-400 text-sm">
         {{ submitError }}
       </div>
+
+      <!-- Search by Name -->
+      <section class="bg-light-card dark:bg-dark-card rounded-lg p-5 shadow-card search-container">
+        <h3 class="font-display text-lg text-ink dark:text-pearl mb-3">Quick Search</h3>
+        <p class="text-sm text-muted dark:text-ash mb-4">
+          Search for an existing charm by name to auto-fill the form, or enter details manually below.
+        </p>
+
+        <div class="relative">
+          <div class="relative">
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Search by name or style ID..."
+              class="form-input pr-10"
+              @input="handleSearch"
+              @focus="showSearchResults = searchResults.length > 0"
+            />
+            <div v-if="searchLoading" class="absolute right-3 top-1/2 -translate-y-1/2">
+              <svg class="animate-spin h-5 w-5 text-muted" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+            <button
+              v-else-if="searchQuery"
+              type="button"
+              @click="clearSearch"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink dark:hover:text-pearl"
+            >
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Search Results Dropdown -->
+          <div
+            v-if="showSearchResults && searchResults.length > 0"
+            class="absolute z-20 w-full mt-1 bg-light-card dark:bg-dark-card border border-light-border dark:border-dark-border rounded-lg shadow-lg max-h-80 overflow-y-auto"
+          >
+            <button
+              v-for="charm in searchResults"
+              :key="charm.styleId"
+              type="button"
+              @click="selectCharm(charm)"
+              class="w-full p-3 flex items-center gap-3 hover:bg-light-bg dark:hover:bg-dark-bg text-left border-b border-light-border dark:border-dark-border last:border-b-0 transition-colors"
+            >
+              <img
+                v-if="charm.primaryImage"
+                :src="charm.primaryImage"
+                :alt="charm.name"
+                class="w-12 h-12 object-cover rounded-md flex-shrink-0"
+              />
+              <div v-else class="w-12 h-12 bg-light-bg dark:bg-dark-bg rounded-md flex items-center justify-center flex-shrink-0">
+                <span class="text-muted text-xs">No img</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-medium text-ink dark:text-pearl truncate">{{ charm.name }}</p>
+                <p class="text-sm text-muted dark:text-ash">
+                  <span class="font-mono">{{ charm.styleId }}</span>
+                  <span v-if="charm.collection" class="ml-2">{{ charm.collection }}</span>
+                </p>
+              </div>
+            </button>
+          </div>
+
+          <!-- No Results -->
+          <div
+            v-else-if="showSearchResults && searchQuery.length >= 2 && !searchLoading && searchResults.length === 0"
+            class="absolute z-20 w-full mt-1 bg-light-card dark:bg-dark-card border border-light-border dark:border-dark-border rounded-lg shadow-lg p-4 text-center text-muted dark:text-ash"
+          >
+            No charms found. You can add it manually below.
+          </div>
+        </div>
+
+        <!-- Selected indicator -->
+        <div v-if="selectedFromSearch" class="mt-3 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-400 text-sm flex items-center gap-2">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+          </svg>
+          Form auto-filled from existing charm. Review and add any missing details below.
+        </div>
+      </section>
 
       <!-- Required Information -->
       <section class="bg-light-card dark:bg-dark-card rounded-lg p-5 shadow-card space-y-4">
