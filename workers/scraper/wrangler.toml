@@ -12,8 +12,12 @@ crons = ["0 0 * * *"]
 
 # Environment variables (set secrets via `wrangler secret put`)
 [vars]
-# Non-sensitive config
 SCRAPER_ENABLED = "true"
 
-# These will be set as secrets:
-# DATABASE_URL - Neon connection string
+# Enable logs
+[observability]
+enabled = true
+
+[observability.logs]
+enabled = true
+invocation_logs = true
