@@ -116,13 +116,37 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url)
 
-    // Manual trigger endpoint (for testing)
-    if (url.pathname === '/run' && request.method === 'POST') {
-      // Trigger the scheduled handler
-      ctx.waitUntil(this.scheduled({ scheduledTime: Date.now(), cron: 'manual' } as ScheduledEvent, env, ctx))
-      return new Response(JSON.stringify({ status: 'started' }), {
+    // Health check / status
+    if (url.pathname === '/status') {
+      return new Response(JSON.stringify({
+        status: 'ok',
+        hasDatabase: !!env.DATABASE_URL,
+        hasBrowser: !!env.BROWSER,
+        scraperEnabled: env.SCRAPER_ENABLED,
+      }), {
         headers: { 'Content-Type': 'application/json' },
       })
+    }
+
+    // Manual trigger endpoint (for testing) - run synchronously for debugging
+    if (url.pathname === '/run' && request.method === 'POST') {
+      console.log('Manual trigger received')
+      console.log('DATABASE_URL set:', !!env.DATABASE_URL)
+      console.log('BROWSER set:', !!env.BROWSER)
+      console.log('SCRAPER_ENABLED:', env.SCRAPER_ENABLED)
+
+      try {
+        await this.scheduled({ scheduledTime: Date.now(), cron: 'manual' } as ScheduledEvent, env, ctx)
+        return new Response(JSON.stringify({ status: 'completed' }), {
+          headers: { 'Content-Type': 'application/json' },
+        })
+      } catch (e: any) {
+        console.error('Scrape failed:', e)
+        return new Response(JSON.stringify({ status: 'error', error: e.message }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
     }
 
     return new Response('Charmventory Scraper Worker', { status: 200 })
