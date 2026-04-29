@@ -129,17 +129,28 @@ export default {
     }
 
     // Manual trigger endpoint (for testing) - run synchronously for debugging
+    // Use ?scraper=hannoush to run a single scraper
     if (url.pathname === '/run' && request.method === 'POST') {
       console.log('Manual trigger received')
       console.log('DATABASE_URL set:', !!env.DATABASE_URL)
       console.log('BROWSER set:', !!env.BROWSER)
       console.log('SCRAPER_ENABLED:', env.SCRAPER_ENABLED)
 
+      const singleScraper = url.searchParams.get('scraper')
+
       try {
-        await this.scheduled({ scheduledTime: Date.now(), cron: 'manual' } as ScheduledEvent, env, ctx)
-        return new Response(JSON.stringify({ status: 'completed' }), {
-          headers: { 'Content-Type': 'application/json' },
-        })
+        if (singleScraper) {
+          // Run single scraper
+          const result = await runSingleScraper(singleScraper, env)
+          return new Response(JSON.stringify(result), {
+            headers: { 'Content-Type': 'application/json' },
+          })
+        } else {
+          await this.scheduled({ scheduledTime: Date.now(), cron: 'manual' } as ScheduledEvent, env, ctx)
+          return new Response(JSON.stringify({ status: 'completed' }), {
+            headers: { 'Content-Type': 'application/json' },
+          })
+        }
       } catch (e: any) {
         console.error('Scrape failed:', e)
         return new Response(JSON.stringify({ status: 'error', error: e.message }), {
@@ -151,6 +162,17 @@ export default {
 
     return new Response('Charmventory Scraper Worker', { status: 200 })
   },
+}
+
+async function runSingleScraper(name: string, env: Env): Promise<ScraperResult> {
+  const shopifyConfig = SHOPIFY_SCRAPERS.find(s => s.name === name)
+  if (shopifyConfig) {
+    return runShopifyScraper(shopifyConfig, env)
+  }
+  if (BROWSER_SCRAPERS.includes(name)) {
+    return runBrowserScraper(name, env)
+  }
+  throw new Error(`Unknown scraper: ${name}`)
 }
 
 async function runShopifyScraper(
@@ -358,7 +380,7 @@ async function saveCharmsBatch(db: any, charms: ScrapedCharm[], scraperName: str
   if (charms.length === 0) return 0
 
   let addedCount = 0
-  const CHUNK_SIZE = 25
+  const CHUNK_SIZE = 200 // Larger batches to reduce subrequest count
   const processedStyleIds: string[] = []
 
   for (let i = 0; i < charms.length; i += CHUNK_SIZE) {
