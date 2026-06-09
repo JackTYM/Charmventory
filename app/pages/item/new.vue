@@ -46,6 +46,7 @@ const itemTypes = [
   { value: 'keychain', label: 'Key Chain' },
   { value: 'ornament', label: 'Ornament' },
   { value: 'box', label: 'Box' },
+  { value: 'bag', label: 'Bag' },
   { value: 'catalogue', label: 'Catalog' },
   { value: 'other', label: 'Other' },
 ]
@@ -112,7 +113,7 @@ const typeFields = computed(() => {
   const type = form.type
 
   // Non-jewelry collectibles
-  const isCollectible = ['box', 'catalogue', 'gift_with_purchase'].includes(type)
+  const isCollectible = ['box', 'bag', 'catalogue', 'gift_with_purchase'].includes(type)
 
   // Murano/glass specific
   const isMurano = type === 'murano'

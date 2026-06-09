@@ -26,6 +26,7 @@ const itemTypes = [
   { value: 'keychain', label: 'Key Chain' },
   { value: 'ornament', label: 'Ornament' },
   { value: 'box', label: 'Box' },
+  { value: 'bag', label: 'Bag' },
   { value: 'catalogue', label: 'Catalog' },
   { value: 'other', label: 'Other' },
 ]
