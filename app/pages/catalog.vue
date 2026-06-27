@@ -17,6 +17,7 @@ onMounted(async () => {
 
 const filters = [
   { id: 'all', label: 'All' },
+  { id: 'for_sale', label: 'Looking to Sell' },
   { id: 'charm', label: 'Charms' },
   { id: 'clip', label: 'Clips' },
   { id: 'murano', label: 'Muranos' },
@@ -45,8 +46,10 @@ const filtersExpanded = ref(false)
 const filteredItems = computed(() => {
   let result = [...items.value]
 
-  // Filter by type
-  if (activeFilter.value !== 'all') {
+  // Filter by type or sale status
+  if (activeFilter.value === 'for_sale') {
+    result = result.filter(item => item.isForSale)
+  } else if (activeFilter.value !== 'all') {
     result = result.filter(item => item.type === activeFilter.value)
   }
 
@@ -205,7 +208,7 @@ const showAddModal = ref(false)
           {{ searchQuery || activeFilter !== 'all' ? 'No items found' : 'Your inventory is empty' }}
         </h2>
         <p class="text-muted dark:text-ash mb-6">
-          {{ searchQuery || activeFilter !== 'all' ? 'Try adjusting your filters.' : 'Start adding charms to build your collection.' }}
+          {{ activeFilter === 'for_sale' ? 'No items are marked as Looking to Sell.' : searchQuery || activeFilter !== 'all' ? 'Try adjusting your filters.' : 'Start adding charms to build your collection.' }}
         </p>
         <NuxtLink v-if="!searchQuery && activeFilter === 'all'" to="/item/new" class="btn btn-primary">
           Add Your First Item

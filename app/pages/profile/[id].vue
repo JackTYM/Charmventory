@@ -239,7 +239,7 @@ function formatDate(dateStr: string) {
               ? 'text-rose-primary border-b-2 border-rose-primary'
               : 'text-muted dark:text-ash'"
           >
-            For Sale/Trade ({{ forSaleItems.length }})
+            Looking to Sell ({{ forSaleItems.length }})
           </button>
         </div>
       </section>
@@ -272,7 +272,7 @@ function formatDate(dateStr: string) {
       <!-- Tab Content: For Sale/Trade -->
       <section v-if="activeTab === 'forSale' && !isOwnProfile">
         <div v-if="forSaleItems.length === 0" class="text-center py-12 text-muted dark:text-ash">
-          No items for sale or trade
+          No items listed for sale
         </div>
 
         <div v-else class="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -312,13 +312,7 @@ function formatDate(dateStr: string) {
                   v-if="item.is_for_sale"
                   class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                 >
-                  For Sale
-                </span>
-                <span
-                  v-if="item.is_for_trade"
-                  class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-                >
-                  For Trade
+                  Looking to Sell
                 </span>
               </div>
 

@@ -938,11 +938,7 @@ async function handleSubmit() {
           <div class="flex items-center gap-6">
             <label class="flex items-center gap-2 cursor-pointer">
               <input v-model="form.isForSale" type="checkbox" class="form-checkbox" />
-              <span class="text-sm text-ink dark:text-pearl">For Sale</span>
-            </label>
-            <label class="flex items-center gap-2 cursor-pointer">
-              <input v-model="form.isForTrade" type="checkbox" class="form-checkbox" />
-              <span class="text-sm text-ink dark:text-pearl">For Trade</span>
+              <span class="text-sm text-ink dark:text-pearl">Looking to Sell</span>
             </label>
           </div>
 

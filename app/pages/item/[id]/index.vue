@@ -343,13 +343,10 @@ const conditionLabels: Record<string, string> = {
             </div>
           </dl>
 
-          <div v-if="item.isForSale || item.isForTrade" class="mt-4 pt-4 border-t border-light-border dark:border-dark-border">
-            <div v-if="item.isForSale" class="flex justify-between text-sm">
-              <span class="text-green-600 dark:text-green-400 font-medium">For Sale</span>
+          <div v-if="item.isForSale" class="mt-4 pt-4 border-t border-light-border dark:border-dark-border">
+            <div class="flex justify-between text-sm">
+              <span class="text-green-600 dark:text-green-400 font-medium">Looking to Sell</span>
               <span class="text-ink dark:text-pearl font-medium">{{ formatPrice(item.askingPrice) }}</span>
-            </div>
-            <div v-if="item.isForTrade" class="text-sm text-blue-600 dark:text-blue-400 font-medium mt-1">
-              Open to Trades
             </div>
           </div>
         </section>
